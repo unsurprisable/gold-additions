@@ -28,11 +28,17 @@ sorry but im not paying $5 to upload it to the chrome web store 😭
 * This works for all courses listed on the "MY SCHEDULE" and "FIND COURSES" pages.
 * Unfortunately, RateMyProfessor's search isn't perfect and your professor sometimes won't be the very first result.
   
+![ezgif-8ed1a734e0159e](https://github.com/user-attachments/assets/d1619285-80bc-49d2-9091-92c65d76035f)
 ***
-
 ## How It Works
 The extension only functions while actively browsing https://my.sa.ucsb.edu/gold.
 
 The program simply searches for the exact HTML elements that typically display the professors' names. Once it finds one, the original element gets replaced with a link to a RateMyProfessor search of that professor's name. Nothing else is modified and there is no visual indication other than the names being clickable.
 
 In the future, I'd like to add a little icon next to professors' names that displays their ratings directly on GOLD, but as of now I don't believe RateMyProfessor hosts any API endpoints that would enable me to add something like that.
+
+## uhhh
+maybe ill start a $5 gofundme to add this to the chrome web store
+
+lmk 👍
+
