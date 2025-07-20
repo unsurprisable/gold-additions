@@ -1,0 +1,19 @@
+{
+  "name": "GOLD x RateMyProfessor",
+  "description": "Implementation of RateMyProfessor into UCSB's course registration system GOLD",
+  "version": "1.0",
+  "host_permissions": ["https://my.sa.ucsb.edu/gold/*"],
+  "action": {
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://my.sa.ucsb.edu/gold/*"],
+      "js": ["contentScript.js"]
+    }
+  ],
+  "manifest_version": 3
+}
