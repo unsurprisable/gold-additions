@@ -11,8 +11,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://my.sa.ucsb.edu/gold/*"],
-      "js": ["contentScript.js"]
+      "matches": ["https://my.sa.ucsb.edu/gold/ResultsFindCourses.aspx"],
+      "js": ["cs_FindCourses.js"]
+    },
+    {
+      "matches": ["https://my.sa.ucsb.edu/gold/StudentSchedule.aspx"],
+      "js": ["cs_StudentSchedule.js"]
     }
   ],
   "manifest_version": 3
