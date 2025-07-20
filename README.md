@@ -11,8 +11,6 @@ If you are not a student at UC Santa Barbara...
 
 go away 🤢
 
-***
-
 ## Installation
 sorry but im not paying $5 to upload it to the chrome web store 😭
 

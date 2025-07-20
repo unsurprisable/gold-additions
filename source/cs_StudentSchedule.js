@@ -1,4 +1,3 @@
-
 (() => {
   console.log("Student Schedule");
 
@@ -7,9 +6,6 @@
   )
   
   scheduleItems.forEach(schedule => {
-    const course = schedule.querySelector('.courseTitle');
-    const subjectArea = course ? course.textContent.trim().split(' ')[0] : '';
-
     const possibleInstructorLabels = schedule.querySelectorAll('label.visible-xs')
     possibleInstructorLabels.forEach(label => {
       if (label.textContent.trim() === "Instructor") {
@@ -22,32 +18,34 @@
           }
         });
 
-        const profName = profTextNode?.textContent;
+        const profName = profTextNode?.textContent.trim();
         if (profName && profNameIsValid(profName)) {
-          const link = createRmpLink(profName, subjectArea);
+          const link = createRmpLink(profName);
           profTextNode.replaceWith(link);
         }
       }
     })
   });
-
-  function profNameIsValid(profName) {
-    const invalidNames = ['cancel', 't.b.a', 't.b.a.'];
-    const name = profName.toLowerCase().trim();
-    return !invalidNames.includes(name);
-  }
-
-  function createRmpLink(profName) {
-    const searchParams = encodeURIComponent(`${profName}`)
-    const ratemyprofURL = `https://www.ratemyprofessors.com/search/professors/1077?q=${searchParams}`;
-
-    const link = document.createElement('a');
-    link.href = ratemyprofURL;
-    link.rel = 'noopener noreferrer';
-    link.textContent = `${profName}`;
-    link.target = '_blank';
-    link.style = "white-space: nowrap;"
-
-    return link;
-  }
 })();
+
+
+
+function profNameIsValid(profName) {
+  const invalidNames = ['cancel', 't.b.a', 't.b.a.'];
+  const name = profName.toLowerCase().trim();
+  return !invalidNames.includes(name);
+}
+
+function createRmpLink(profName) {
+  const searchParams = encodeURIComponent(`${profName}`)
+  const ratemyprofURL = `https://www.ratemyprofessors.com/search/professors/1077?q=${searchParams}`;
+
+  const link = document.createElement('a');
+  link.href = ratemyprofURL;
+  link.rel = 'noopener noreferrer';
+  link.textContent = `${profName}`;
+  link.target = '_blank';
+  link.style = "white-space: nowrap;"
+
+  return link;
+}
