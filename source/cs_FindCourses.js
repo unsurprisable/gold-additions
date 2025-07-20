@@ -1,3 +1,4 @@
+
 (() => {
   // finds and replaces all instructor names with an <a/> element
   // redirecting to a RateMyProfessor search of their name
@@ -11,17 +12,8 @@
 
   instructorSpans.forEach(span => {
     const profName = span.textContent?.trim();
-    if (profName) {
-      const searchParams = encodeURIComponent(`${profName} ${subjectArea}`)
-      const ratemyprofURL = `https://www.ratemyprofessors.com/search/professors/1077?q=${searchParams}`;
-      
-      const link = document.createElement('a');
-      link.href = ratemyprofURL;
-      link.rel = 'noopener noreferrer';
-      link.textContent = profName;
-      link.target = '_blank';
-      link.style = "white-space: nowrap;"
-
+    if (profName && profNameIsValid(profName)) {
+      const link = createRmpLink(profName, subjectArea);
       span.replaceWith(link);
     }
   });
@@ -36,5 +28,25 @@
       }
     }
     return ''
+  }
+
+  function profNameIsValid(profName) {
+    const invalidNames = ['cancel', 't.b.a', 't.b.a.'];
+    const name = profName.toLowerCase().trim();
+    return !invalidNames.includes(name);
+  }
+
+  function createRmpLink(profName) {
+    const searchParams = encodeURIComponent(`${profName}`)
+    const ratemyprofURL = `https://www.ratemyprofessors.com/search/professors/1077?q=${searchParams}`;
+
+    const link = document.createElement('a');
+    link.href = ratemyprofURL;
+    link.rel = 'noopener noreferrer';
+    link.textContent = `${profName}`;
+    link.target = '_blank';
+    link.style = "white-space: nowrap;"
+
+    return link;
   }
 })();
