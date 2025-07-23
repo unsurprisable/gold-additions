@@ -1,14 +1,14 @@
-// idk how to import into content scripts so im just manually copy and pasting these 😭😭😭
+const SEARCH_URL = 'https://www.ratemyprofessors.com/search/professors/1077?q='
+const INVALID_PROF_NAMES = ['cancel', 't.b.a', 't.b.a.'];
+
 
 function profNameIsValid(profName) {
-  const invalidNames = ['cancel', 't.b.a', 't.b.a.'];
   const name = profName.toLowerCase().trim();
-  return !invalidNames.includes(name);
+  return !INVALID_PROF_NAMES.includes(name);
 }
 
 function createRmpLink(profName) {
-  const searchParams = encodeURIComponent(`${profName}`)
-  const ratemyprofURL = `https://www.ratemyprofessors.com/search/professors/1077?q=${searchParams}`;
+  const ratemyprofURL = SEARCH_URL + encodeURIComponent(profName);
 
   const link = document.createElement('a');
   link.href = ratemyprofURL;

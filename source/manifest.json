@@ -4,19 +4,17 @@
   "version": "1.0",
   "host_permissions": ["https://my.sa.ucsb.edu/gold/*"],
   "action": {
-    "default_icon": "icon.png"
-  },
-  "background": {
-    "service_worker": "background.js"
+    "default_popup": "popup/search.html",
+    "default_icon": "icons/icon16.png"
   },
   "content_scripts": [
     {
       "matches": ["https://my.sa.ucsb.edu/gold/ResultsFindCourses.aspx"],
-      "js": ["cs_FindCourses.js"]
+      "js": ["scripts/utils.js", "scripts/cs_FindCourses.js"]
     },
     {
       "matches": ["https://my.sa.ucsb.edu/gold/StudentSchedule.aspx"],
-      "js": ["cs_StudentSchedule.js"]
+      "js": ["scripts/utils.js", "scripts/cs_StudentSchedule.js"]
     }
   ],
   "manifest_version": 3
