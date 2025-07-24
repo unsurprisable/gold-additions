@@ -1,21 +1,18 @@
 # GOLD x RateMyProfessor
 Allows you to click on professor's names in GOLD to instantly view their RateMyProfessor page.
 
+### This extension only works for UCSB's GOLD registration system!
+
 ***
 
 ![ezgif-6e133ed31c42ec](https://github.com/user-attachments/assets/def35bcf-9f39-4bc9-a49d-dc444d213503)
 
-## This extension only works for UCSB's GOLD registration system!
-
-If you are not a student at UC Santa Barbara... 
-
-go away 🤢
 
 ## Installation
-sorry but im not paying $5 to upload it to the chrome web store 😭
+im not paying $5 to upload it to the chrome web store 😭
 
-1. Click on the green "<> Code" button at the top and click [Download ZIP](https://github.com/unsurprisable/gold-rmp-extension/archive/refs/heads/main.zip) (or this link)
-2. Save the ZIP file and Extract it
+1. Click on the latest release under [Releases](https://github.com/unsurprisable/gold-rmp-extension/releases/latest) on the right
+2. Download and extract the ZIP file named "gold-rmp-v..."
 3. Open Chrome and type [chrome://extensions]() into the search bar
 4. On the top right, flip the "Developer mode" switch so that it's enabled
 5. Click "Load unpacked" at the top left and select the "source" folder in the extracted ZIP file.
