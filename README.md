@@ -11,10 +11,10 @@ Allows you to click on professor's names in GOLD to instantly view their RateMyP
 ## Installation
 im not paying $5 to upload it to the chrome web store 😭
 
-1. Click on the latest release under [Releases](https://github.com/unsurprisable/gold-rmp-extension/releases/latest) on the right
+1. Click on the [latest release](https://github.com/unsurprisable/gold-rmp-extension/releases/latest) under <b>Releases</b> on the right.
 2. Download and extract the ZIP file named "gold-rmp-v..."
-3. Open Chrome and type [chrome://extensions]() into the search bar
-4. On the top right, flip the "Developer mode" switch so that it's enabled
+3. Open Chrome and type [chrome://extensions]() into the search bar.
+4. On the top right, flip the "Developer mode" switch so that it's enabled.
 5. Click "Load unpacked" at the top left and select the "source" folder in the extracted ZIP file.
 6. shabang that's it, just remember if you move the folder you'll have to re-do Step 5.
 
