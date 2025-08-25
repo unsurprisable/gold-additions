@@ -1,8 +1,7 @@
 (() => {
-  // finds and replaces all instructor names with an <a/> element
-  // redirecting to a RateMyProfessor search of their name
   console.log("Find Courses");
   
+  // Replacing professor names with links
   const instructorSpans = document.querySelectorAll(
     '.col-lg-search-instructor span[style*="word-wrap"]'
   );
