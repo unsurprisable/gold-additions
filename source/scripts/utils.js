@@ -1,17 +1,5 @@
 const SEARCH_URL = 'https://www.ratemyprofessors.com/search/professors/1077?q='
 
-/**
- * @typedef  {Object}   Course
- * @property {string}   name
- * @property {string}   professor
- * @property {string}   days
- * @property {string}   time
- * @property {string}   location
- * @property {string}   courseID
- * @property {string}   grading
- * @property {string}   units
- */
-
 function profNameIsValid(profName) {
   const name = profName.toLowerCase().trim();
   const INVALID_PROF_NAMES = ['cancel', 't.b.a', 't.b.a.'];
