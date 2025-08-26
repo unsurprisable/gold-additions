@@ -6,13 +6,15 @@ function html(strings, ...values) {
 
 (() => {
   console.log("Student Schedule");
+  
+  const BUTTON_COLOR = "#2280bf";
+  const HEADER_COLOR = "#00468b";
 
-  // user settings (to be implemented later)
-  const SHORT_COURSE_NAMES = true;
-  const QUARTER_START_YEAR = '2025';
-  const QUARTER_START_MONTH = '01';
-  const QUARTER_START_DAY = '01'; // first monday of the quarter
-  // end of user settings
+  // user settings (assigned when download button is pressed)
+  let SHORT_COURSE_NAMES = null;
+  let QUARTER_START_YEAR = null;
+  let QUARTER_START_MONTH = null;
+  let QUARTER_START_DAY = null;
 
   /** @type {Element[]} */
   const scheduleItems = document.querySelectorAll('.scheduleItem');
@@ -30,10 +32,10 @@ function html(strings, ...values) {
 
   profTextNodes.forEach(profTextNode => {
     const profName = profTextNode?.textContent.trim();
-      if (profName && profNameIsValid(profName)) {
-        const link = createRmpLink(profName);
-        profTextNode.replaceWith(link);
-      }
+    if (profName && profNameIsValid(profName)) {
+      const link = createRmpLink(profName);
+      profTextNode.replaceWith(link);
+    }
   });
 
   // Calendar button
@@ -44,7 +46,7 @@ function html(strings, ...values) {
   exportButton.textContent = "Export Schedule to Calendar";
   exportButton.href = '#';
   const subtitle = document.createElement('div');
-  subtitle.style = "color: gray; margin-top: 3px;";
+  subtitle.style = "color: gray; margin-top: 3px";
   subtitle.style.fontSize = '14px';
   subtitle.textContent = "Google, Outlook, Apple (.ics)";
 
@@ -63,12 +65,26 @@ function html(strings, ...values) {
   backdrop.innerHTML = html`
 
     <div id="ics-settings">
-      <div id="content" class="legacycontent">
-        <h3>Calendar Export Settings</h3>
-        <div id="ics-button-container">
-          <a id="ics-download" class="gold-button" href="">Download</a>
-          <a id="ics-cancel" class="gold-button" href="">Cancel</a>
+      <h3>CHOOSE YOUR PREFERENCES</h3>
+      <hr>
+      <div style="display: flex; flex-direction: column; justify-content: left">
+        <span>First SUNDAY of the quarter? *</span>
+        <input id="ics-start-date" type=date>
+      </div>
+      <div style="display: flex; flex-direction: column; justify-content: left">
+        <span>Shorten course names?</span>
+        <div>
+          <label id="shorten-course-checkbox" class="switch" style="margin-right: 10px">
+            <input type=checkbox>
+            <span class="slider"></span>
+          </label>
+          "CMPSC 16 - PROBLEM SOLVING 1"
         </div>
+      </div>
+      <hr>
+      <div id="ics-button-container">
+        <a id="ics-download" class="aspNetDisabled gold-button" href="">Download</a>
+        <a id="ics-cancel" class="gold-button" href="">Cancel</a>
       </div>
     </div>
 
@@ -97,10 +113,12 @@ function html(strings, ...values) {
 
       #ics-settings {
         display: flex;
-        align-items: center;
-        justify-content: center;
+        flex-direction: column;
+        align-items: flex-start;
+        overflow: visible;
+        row-gap: 15px;
         background: white;
-        padding: 20px;
+        padding: 20px 40px;
         border-radius: 10px;
         width: 400px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -112,13 +130,96 @@ function html(strings, ...values) {
         transition: transform ${SETTINGS_ANIMATION_TIME}ms cubic-bezier(.03,.89,.04,.98);
         transform: translateY(0);
       }
+
+      #ics-settings h3 {
+        color: ${HEADER_COLOR};
+        font-weight: bolder;
+        font-size: 22px;
+        align-self: center;
+      }
+
+      #ics-settings hr {
+        margin: 8px 0;
+        width: 100%; 
+        height: 1px;
+      }
+
+      #ics-settings span {
+        margin-left: 2px;
+        font-weight: normal;
+        font-size: 18px;
+        color: ${HEADER_COLOR};
+      }
+
+      #ics-settings input[type="date"] {
+        width: 320px;
+        height: 40px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 5px;
+        font-size: 18px;
+      }
+
+      #ics-settings input[type="checkbox"] {
+        width: 20px; height: 20px;
+      }
         
       #ics-button-container {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
         gap: 10px;
-        margin-top: 20px;
+        align-self: center;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 52px;
+        height: 30px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        border-radius: 30px;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .1s;
+        transition: .1s ease;
+      }
+
+      .slider:before {
+        position: absolute;
+        border-radius: 50%;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .1s;
+        transition: .1s ease;
+      }
+
+      input:checked + .slider {
+        background-color: ${BUTTON_COLOR};
+      }
+
+      input:focus + .slider {
+        box-shadow: 0 0 1px ${BUTTON_COLOR};
+      }
+
+      input:checked + .slider:before {
+        -webkit-transform: translateX(20px);
+        -ms-transform: translateX(20px);
+        transform: translateX(20px);
       }
     </style>
   `;
@@ -126,6 +227,12 @@ function html(strings, ...values) {
   document.body.appendChild(backdrop);
 
 
+
+  const startDateInput = document.getElementById('ics-start-date');
+  const shortenCheckboxLabel = document.getElementById('shorten-course-checkbox');
+  const shortenCheckbox = shortenCheckboxLabel.querySelector('input[type="checkbox"]');
+  const downloadButton = document.getElementById('ics-download');
+  const cancelButton = document.getElementById('ics-cancel');
 
   exportButton.addEventListener('click', (event) => {
     event.preventDefault(); // prevent from refreshing
@@ -138,8 +245,35 @@ function html(strings, ...values) {
     }
   });
 
-  document.getElementById('ics-download').addEventListener('click', (event) => {
+  startDateInput.addEventListener('input', (event) => {
+    if (startDateInput.value.trim() !== '') {
+      downloadButton.classList.remove('aspNetDisabled');
+    } else {
+      downloadButton.classList.add('aspNetDisabled');
+    }
+  });
+
+  shortenCheckboxLabel.addEventListener('change', () => {
+    if (shortenCheckbox.checked) {
+      shortenCheckboxLabel.nextSibling.textContent = ` "CMPSC 16" `;
+    } else {
+      shortenCheckboxLabel.nextSibling.textContent = ` "CMPSC 16 - PROBLEM SOLVING 1" `;
+    }
+  });
+
+  downloadButton.addEventListener('click', (event) => {
     event.preventDefault();
+
+    // gather user settings
+    SHORT_COURSE_NAMES = shortenCheckbox.checked;
+    const [yyyy, mm, dd] = startDateInput.value.split('-');
+    QUARTER_START_YEAR = yyyy;
+    QUARTER_START_MONTH = mm;
+    QUARTER_START_DAY = dd;
+
+    if (downloadButton.classList.contains('aspNetDisabled')) {
+      return; // prob not the best way to do this but wtv
+    }
     if (icsFileData) {
       console.log("Retrieving calendar data...")
     } else {
@@ -155,7 +289,7 @@ function html(strings, ...values) {
     hideCalendarContext();
   });
 
-  document.getElementById('ics-cancel').addEventListener('click', (event) => {
+  cancelButton.addEventListener('click', (event) => {
     event.preventDefault();
     hideCalendarContext();
   });
@@ -194,7 +328,7 @@ function html(strings, ...values) {
         }
       })
     });
-    
+
     return profNodes;
   }
 
@@ -241,11 +375,11 @@ function html(strings, ...values) {
         let courseID = courseInfo.children[0].textContent.trim();
         let grading = courseInfo.children[1].textContent.trim().substring(9); // remove 'Grading: ' prefix
         let units = courseInfo.children[2].textContent.trim().substring(0, 3); // remove ' Units' suffix
-      
+
         meetings.push(new Meeting(name, professor, days, time, location, courseID, grading, units));
       };
     });
-    
+
     return meetings;
   }
 
@@ -313,7 +447,7 @@ function html(strings, ...values) {
         const adjustedHours = parseInt(hours, 10) + 12;
         hours = adjustedHours.toString();
       }
-      let minutes = time.substring(time.indexOf(':')+1, time.indexOf(' '));
+      let minutes = time.substring(time.indexOf(':') + 1, time.indexOf(' '));
 
       return `${QUARTER_START_YEAR}${QUARTER_START_MONTH}${QUARTER_START_DAY}T${hours}${minutes}00`;
     }
@@ -342,16 +476,16 @@ function html(strings, ...values) {
        * @type {MeetingIcsData}
        */
       const data = {};
-      
+
       data.summary = this.name;
       if (SHORT_COURSE_NAMES) {
         const hyphenIndex = this.name.indexOf('-');
         if (hyphenIndex) {
-          data.summary = this.name.substring(0, hyphenIndex-1);
+          data.summary = this.name.substring(0, hyphenIndex - 1);
         }
       }
       data.dtStart = this.getIcsTime(this.time.substring(0, this.time.indexOf('-')));
-      data.dtEnd = this.getIcsTime(this.time.substring(this.time.indexOf('-')+1));
+      data.dtEnd = this.getIcsTime(this.time.substring(this.time.indexOf('-') + 1));
       data.days = this.getIcsDays(this.days);
       data.location = this.location;
       data.description = `Professor: ${this.professor}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`;
