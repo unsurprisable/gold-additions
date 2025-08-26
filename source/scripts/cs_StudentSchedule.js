@@ -298,24 +298,8 @@ function html(strings, ...values) {
     if (downloadButton.classList.contains('aspNetDisabled')) {
       return; // prob not the best way to do this but wtv
     }
-    // gather calendar settings
-    SHORT_COURSE_NAMES = shortenCheckbox.checked;
-    let [yyyy, mm, dd] = startDateInput.value.split('-');
-    QUARTER_START_YEAR = yyyy;
-    QUARTER_START_MONTH = mm;
-    QUARTER_START_DAY = dd;
-    [yyyy, mm, dd] = endDateInput.value.split('-');
-    QUARTER_END_YEAR = yyyy;
-    QUARTER_END_MONTH = mm;
-    QUARTER_END_DAY = dd;
-
     console.log("Generating calendar...");
-    const meetings = scrapeCourses();
-    const icsFileData = meetingsToICS(meetings);
-    console.groupCollapsed('ICS File Data');
-    console.log(icsFileData);
-    console.groupEnd();
-
+    const icsFileData = generateIcsData();
     downloadCalendar('GOLD Schedule Calendar', icsFileData);
     hideCalendarContext();
   });
@@ -325,11 +309,7 @@ function html(strings, ...values) {
     hideCalendarContext();
     
     console.log("[DEBUG] Generating calendar...");
-    const meetings = scrapeCourses();
-    const icsFileData = meetingsToICS(meetings);
-    console.groupCollapsed('ICS File Data');
-    console.log(icsFileData);
-    console.groupEnd();
+    generateIcsData();
   });
 
   function showCalendarContext() {
@@ -419,6 +399,29 @@ function html(strings, ...values) {
     });
 
     return meetings;
+  }
+
+  /**
+   * @returns {string}
+   */
+  function generateIcsData() {
+    // gather calendar settings
+    SHORT_COURSE_NAMES = shortenCheckbox.checked;
+    let [yyyy, mm, dd] = startDateInput.value.split('-');
+    QUARTER_START_YEAR = yyyy;
+    QUARTER_START_MONTH = mm;
+    QUARTER_START_DAY = dd;
+    [yyyy, mm, dd] = endDateInput.value.split('-');
+    QUARTER_END_YEAR = yyyy;
+    QUARTER_END_MONTH = mm;
+    QUARTER_END_DAY = dd;
+
+    const meetings = scrapeCourses();
+    const icsFileData = meetingsToICS(meetings);
+    console.groupCollapsed('ICS File Data');
+    console.log(icsFileData);
+    console.groupEnd();
+    return icsFileData;
   }
 
   /**
@@ -535,7 +538,7 @@ function html(strings, ...values) {
       data.dtStart = this.getIcsTime(this.time.substring(0, this.time.indexOf('-')));
       data.dtEnd = this.getIcsTime(this.time.substring(this.time.indexOf('-') + 1));
       data.days = this.getIcsDays(this.days);
-      data.untilDate = `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T000000`
+      data.untilDate = `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T235959`
       data.location = this.location;
       data.description = `Professor: ${this.professor}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`;
 
