@@ -15,6 +15,9 @@ function html(strings, ...values) {
   let QUARTER_START_YEAR = null;
   let QUARTER_START_MONTH = null;
   let QUARTER_START_DAY = null;
+  let QUARTER_END_YEAR = null;
+  let QUARTER_END_MONTH = null;
+  let QUARTER_END_DAY = null;
 
   /** @type {Element[]} */
   const scheduleItems = document.querySelectorAll('.scheduleItem');
@@ -24,8 +27,6 @@ function html(strings, ...values) {
 
   /** @type {Element[]} */
   const currentScheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)')
-
-  let icsFileData = null;
 
   // Replacing professor names with links
   const profTextNodes = findProfessorNodes();
@@ -68,11 +69,11 @@ function html(strings, ...values) {
       <h3>CHOOSE YOUR PREFERENCES</h3>
       <hr style="margin-top: -20px">
       <div class="input-container">
-        <span>First SUNDAY of the quarter? *</span>
+        <span>First MONDAY of the quarter? *</span>
         <input id="ics-start-date" type=date>
       </div>
       <div class="input-container">
-        <span>Last FRIDAY of the quarter? (WIP) *</span>
+        <span>Last FRIDAY of the quarter? *</span>
         <input id="ics-end-date" type=date>
       </div>
       <div class="input-container">
@@ -294,24 +295,23 @@ function html(strings, ...values) {
 
   downloadButton.addEventListener('click', (event) => {
     event.preventDefault();
-
-    // gather user settings
-    SHORT_COURSE_NAMES = shortenCheckbox.checked;
-    const [yyyy, mm, dd] = startDateInput.value.split('-');
-    QUARTER_START_YEAR = yyyy;
-    QUARTER_START_MONTH = mm;
-    QUARTER_START_DAY = dd;
-
     if (downloadButton.classList.contains('aspNetDisabled')) {
       return; // prob not the best way to do this but wtv
     }
-    if (icsFileData) {
-      console.log("Retrieving calendar data...")
-    } else {
-      console.log("Generating calendar...");
-      const meetings = scrapeCourses();
-      icsFileData = meetingsToICS(meetings);
-    }
+    // gather calendar settings
+    SHORT_COURSE_NAMES = shortenCheckbox.checked;
+    let [yyyy, mm, dd] = startDateInput.value.split('-');
+    QUARTER_START_YEAR = yyyy;
+    QUARTER_START_MONTH = mm;
+    QUARTER_START_DAY = dd;
+    [yyyy, mm, dd] = endDateInput.value.split('-');
+    QUARTER_END_YEAR = yyyy;
+    QUARTER_END_MONTH = mm;
+    QUARTER_END_DAY = dd;
+
+    console.log("Generating calendar...");
+    const meetings = scrapeCourses();
+    const icsFileData = meetingsToICS(meetings);
     console.groupCollapsed('ICS File Data');
     console.log(icsFileData);
     console.groupEnd();
@@ -323,6 +323,13 @@ function html(strings, ...values) {
   cancelButton.addEventListener('click', (event) => {
     event.preventDefault();
     hideCalendarContext();
+    
+    console.log("[DEBUG] Generating calendar...");
+    const meetings = scrapeCourses();
+    const icsFileData = meetingsToICS(meetings);
+    console.groupCollapsed('ICS File Data');
+    console.log(icsFileData);
+    console.groupEnd();
   });
 
   function showCalendarContext() {
@@ -441,6 +448,7 @@ function html(strings, ...values) {
    * @property {string} dtStart
    * @property {string} dtEnd
    * @property {string} days
+   * @property {string} untilDate
    * @property {string} location
    * @property {string} description
    */
@@ -474,9 +482,18 @@ function html(strings, ...values) {
      */
     getIcsTime(time) {
       let hours = time.substring(0, time.indexOf(':'));
+
+      // convert 12 hour clock to 24 hour clock
       if (hours !== "12" && time.split(' ')[1] === 'PM') {
         const adjustedHours = parseInt(hours, 10) + 12;
         hours = adjustedHours.toString();
+      } else if (hours === "12" && time.split(' ')[1] === 'AM') {
+        hours = "00";
+      }
+
+      // append "0" before any time 1-9AM to conform with .ics time formatting
+      if (parseInt(hours, 10) < 10) {
+        hours = '0' + hours;
       }
       let minutes = time.substring(time.indexOf(':') + 1, time.indexOf(' '));
 
@@ -518,6 +535,7 @@ function html(strings, ...values) {
       data.dtStart = this.getIcsTime(this.time.substring(0, this.time.indexOf('-')));
       data.dtEnd = this.getIcsTime(this.time.substring(this.time.indexOf('-') + 1));
       data.days = this.getIcsDays(this.days);
+      data.untilDate = `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T000000`
       data.location = this.location;
       data.description = `Professor: ${this.professor}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`;
 
@@ -535,7 +553,7 @@ function html(strings, ...values) {
 SUMMARY:${data.summary}
 DTSTART;TZID=America/Los_Angeles:${data.dtStart}
 DTEND;TZID=America/Los_Angeles:${data.dtEnd}
-RRULE:FREQ=WEEKLY;BYDAY=${data.days}
+RRULE:FREQ=WEEKLY;BYDAY=${data.days};UNTIL=${data.untilDate}
 LOCATION:${data.location}
 DESCRIPTION:${data.description}
 END:VEVENT`;
