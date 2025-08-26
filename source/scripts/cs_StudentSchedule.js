@@ -83,7 +83,7 @@ function html(strings, ...values) {
             <input type=checkbox>
             <span class="slider"></span>
           </label>
-          "MATH 1A - LEARNING FRACTIONS"
+          "MATH 1A - LEARNING FRACTIONS 101"
         </div>
       </div>
       <div class="input-container">
@@ -133,7 +133,7 @@ function html(strings, ...values) {
         align-items: flex-start;
         overflow: visible;
         row-gap: 32px;
-        background: white;
+        background: linear-gradient(110deg, #fff, #fff, #edf3fe);
         padding: 20px 40px;
         border-radius: 10px;
         width: 450px;
@@ -205,6 +205,7 @@ function html(strings, ...values) {
         display: inline-block;
         width: 52px;
         height: 30px;
+        user-select: none;
       }
 
       .switch input {
@@ -289,7 +290,7 @@ function html(strings, ...values) {
     if (shortenCheckbox.checked) {
       shortenCheckboxLabel.nextSibling.textContent = ` "MATH 1A" `;
     } else {
-      shortenCheckboxLabel.nextSibling.textContent = ` "MATH 1A - LEARNING FRACTIONS" `;
+      shortenCheckboxLabel.nextSibling.textContent = ` "MATH 1A - LEARNING FRACTIONS 101" `;
     }
   });
 
