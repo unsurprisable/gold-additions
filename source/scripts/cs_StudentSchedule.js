@@ -17,6 +17,8 @@
   /** @type {Element[]} */
   const currentScheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)')
 
+  let icsFileData = null;
+
   // Replacing professor names with links
   const profTextNodes = findProfessorNodes();
 
@@ -28,32 +30,138 @@
       }
   });
 
-  // Adding Calendar button
+  // Calendar button
   const buttonContainer = document.createElement('div');
   buttonContainer.style = "display: inline-block; text-align: center; margin-top: 15px";
-  const button = document.createElement('a');
-  button.className = 'gold-button';
-  button.textContent = 'Export Schedule to Calendar';
-  button.href = '#';
+  const exportButton = document.createElement('a');
+  exportButton.className = 'gold-button';
+  exportButton.textContent = "Export Schedule to Calendar";
+  exportButton.href = '#';
   const subtitle = document.createElement('div');
   subtitle.style = "color: gray; margin-top: 3px";
   subtitle.style.fontSize = '14px';
-  subtitle.textContent = 'Google, Outlook, Apple (.ics)';
-
-  button.addEventListener('click', (event) => {
-    event.preventDefault(); // prevent from refreshing
-    console.log('Generating calendar...');
-    const meetings = scrapeCourses();
-    const calendarData = meetingsToICS(meetings);
-    console.log(calendarData);
-    downloadCalendar('GOLD Schedule Calendar', calendarData);
-  });
+  subtitle.textContent = "Google, Outlook, Apple (.ics)";
 
   const hrElement = scheduleContainer.querySelector('hr');
+  hrElement.style = "margin-top: 10px";
   scheduleContainer.insertBefore(buttonContainer, hrElement);
-  buttonContainer.appendChild(button);
+  buttonContainer.appendChild(exportButton);
   buttonContainer.appendChild(subtitle);
 
+  // Export menu
+  const style = document.createElement('style');
+  style.textContent = `
+  #ics-settings-backdrop {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.2s ease;
+    opacity: 0;
+  }
+  
+  #ics-settings-backdrop.menu-visible {
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  #ics-settings-backdrop.menu-hidden {
+    visibility: hidden;
+  }
+
+  #ics-settings {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 1;
+    transform: translateY(100vh);
+  }
+
+  #ics-settings-backdrop.menu-visible #ics-settings {
+    transition: transform 0.2s cubic-bezier(.03,.89,.04,.98);
+    transform: translateY(0);
+  }
+    
+  #ics-button-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  `;
+  document.body.appendChild(style);
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'ics-settings-backdrop';
+  backdrop.classList.add('menu-hidden');
+  backdrop.innerHTML = `
+    <div id="ics-settings">
+      <div id="content" class="legacycontent">
+        <h3>Calendar Export Settings</h3>
+        <div id="ics-button-container">
+          <a id="ics-download" class="gold-button" href="">Download</a>
+          <a id="ics-cancel" class="gold-button" href="">Cancel</a>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+
+
+  exportButton.addEventListener('click', (event) => {
+    event.preventDefault(); // prevent from refreshing
+    showCalendarContext();
+  });
+
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) {
+      hideCalendarContext();
+    }
+  });
+
+  document.getElementById('ics-download').addEventListener('click', (event) => {
+    event.preventDefault();
+    if (icsFileData) {
+      console.log("Retrieving calendar data...")
+    } else {
+      console.log("Generating calendar...");
+      const meetings = scrapeCourses();
+      icsFileData = meetingsToICS(meetings);
+    }
+    console.groupCollapsed('ICS File Data');
+    console.log(icsFileData);
+    console.groupEnd();
+
+    downloadCalendar('GOLD Schedule Calendar', icsFileData);
+    hideCalendarContext();
+  });
+
+  document.getElementById('ics-cancel').addEventListener('click', (event) => {
+    event.preventDefault();
+    hideCalendarContext();
+  });
+
+  function showCalendarContext() {
+    backdrop.classList.remove('menu-hidden');
+    backdrop.classList.add('menu-visible')
+  }
+  function hideCalendarContext() {
+    backdrop.classList.remove('menu-visible');
+    setTimeout(() => {
+      backdrop.classList.add('menu-hidden');
+    }, 200);
+  }
 
 
   /**
@@ -130,6 +238,25 @@
     });
     
     return meetings;
+  }
+
+  /**
+   * @param {string} filename 
+   * @param {string} content 
+   */
+  function downloadCalendar(filename, content) {
+    const blob = new Blob([content], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
 
@@ -251,23 +378,6 @@ ${meetings.map(meetingToIcsEvent).join('\n')}
 END:VCALENDAR`;
   }
 
-  /**
-   * @param {string} filename 
-   * @param {string} content 
-   */
-  function downloadCalendar(filename, content) {
-    const blob = new Blob([content], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
 
 })();
