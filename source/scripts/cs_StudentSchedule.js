@@ -1,3 +1,9 @@
+
+// for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
+function html(strings, ...values) {
+  return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
+}
+
 (() => {
   console.log("Student Schedule");
 
@@ -38,7 +44,7 @@
   exportButton.textContent = "Export Schedule to Calendar";
   exportButton.href = '#';
   const subtitle = document.createElement('div');
-  subtitle.style = "color: gray; margin-top: 3px";
+  subtitle.style = "color: gray; margin-top: 3px;";
   subtitle.style.fontSize = '14px';
   subtitle.textContent = "Google, Outlook, Apple (.ics)";
 
@@ -49,62 +55,13 @@
   buttonContainer.appendChild(subtitle);
 
   // Export menu
-  const style = document.createElement('style');
-  style.textContent = `
-  #ics-settings-backdrop {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    transition: opacity 0.2s ease;
-    opacity: 0;
-  }
-  
-  #ics-settings-backdrop.menu-visible {
-    visibility: visible;
-    opacity: 1;
-  }
-  
-  #ics-settings-backdrop.menu-hidden {
-    visibility: hidden;
-  }
-
-  #ics-settings {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    width: 400px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    opacity: 1;
-    transform: translateY(100vh);
-  }
-
-  #ics-settings-backdrop.menu-visible #ics-settings {
-    transition: transform 0.2s cubic-bezier(.03,.89,.04,.98);
-    transform: translateY(0);
-  }
-    
-  #ics-button-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
-  }
-  `;
-  document.body.appendChild(style);
+  SETTINGS_ANIMATION_TIME = 300; //ms
 
   const backdrop = document.createElement('div');
   backdrop.id = 'ics-settings-backdrop';
-  backdrop.classList.add('menu-hidden');
-  backdrop.innerHTML = `
+  backdrop.className = 'menu-hidden';
+  backdrop.innerHTML = html`
+
     <div id="ics-settings">
       <div id="content" class="legacycontent">
         <h3>Calendar Export Settings</h3>
@@ -114,7 +71,58 @@
         </div>
       </div>
     </div>
+
+    <style>
+      #ics-settings-backdrop {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity ${SETTINGS_ANIMATION_TIME}ms ease;
+        opacity: 0;
+      }
+      
+      #ics-settings-backdrop.menu-visible {
+        visibility: visible;
+        opacity: 1;
+      }
+      
+      #ics-settings-backdrop.menu-hidden {
+        visibility: hidden;
+      }
+
+      #ics-settings {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        opacity: 1;
+        transform: translateY(100vh);
+      }
+
+      #ics-settings-backdrop.menu-visible #ics-settings {
+        transition: transform ${SETTINGS_ANIMATION_TIME}ms cubic-bezier(.03,.89,.04,.98);
+        transform: translateY(0);
+      }
+        
+      #ics-button-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+      }
+    </style>
   `;
+
   document.body.appendChild(backdrop);
 
 
@@ -160,8 +168,9 @@
     backdrop.classList.remove('menu-visible');
     setTimeout(() => {
       backdrop.classList.add('menu-hidden');
-    }, 200);
+    }, SETTINGS_ANIMATION_TIME);
   }
+
 
 
   /**
