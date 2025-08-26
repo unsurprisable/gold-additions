@@ -66,27 +66,41 @@ function html(strings, ...values) {
 
     <div id="ics-settings">
       <h3>CHOOSE YOUR PREFERENCES</h3>
-      <hr>
-      <div style="display: flex; flex-direction: column; justify-content: left">
+      <hr style="margin-top: -20px">
+      <div class="input-container">
         <span>First SUNDAY of the quarter? *</span>
         <input id="ics-start-date" type=date>
       </div>
-      <div style="display: flex; flex-direction: column; justify-content: left">
+      <div class="input-container">
+        <span>Last FRIDAY of the quarter? (WIP) *</span>
+        <input id="ics-end-date" type=date>
+      </div>
+      <div class="input-container">
         <span>Shorten course names?</span>
         <div>
           <label id="shorten-course-checkbox" class="switch" style="margin-right: 10px">
             <input type=checkbox>
             <span class="slider"></span>
           </label>
-          "CMPSC 16 - PROBLEM SOLVING 1"
+          "MATH 1A - LEARNING FRACTIONS"
         </div>
       </div>
-      <hr>
+      <div class="input-container">
+        <span>Include course finals? (WIP)</span>
+        <div>
+          <label id="include-finals-checkbox" class="switch" style="margin-right: 10px">
+            <input type=checkbox>
+            <span class="slider"></span>
+          </label>
+          Feature not available yet.
+        </div>
+      </div>
       <div id="ics-button-container">
         <a id="ics-download" class="aspNetDisabled gold-button" href="">Download</a>
         <a id="ics-cancel" class="gold-button" href="">Cancel</a>
       </div>
     </div>
+    <div></div>
 
     <style>
       #ics-settings-backdrop {
@@ -95,8 +109,9 @@ function html(strings, ...values) {
         width: 100%; height: 100%;
         background: rgba(0, 0, 0, 0.5);
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: space-evenly;
         z-index: 9999;
         transition: opacity ${SETTINGS_ANIMATION_TIME}ms ease;
         opacity: 0;
@@ -116,11 +131,11 @@ function html(strings, ...values) {
         flex-direction: column;
         align-items: flex-start;
         overflow: visible;
-        row-gap: 15px;
+        row-gap: 32px;
         background: white;
         padding: 20px 40px;
         border-radius: 10px;
-        width: 400px;
+        width: 450px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         opacity: 1;
         transform: translateY(100vh);
@@ -139,7 +154,7 @@ function html(strings, ...values) {
       }
 
       #ics-settings hr {
-        margin: 8px 0;
+        margin: 0;
         width: 100%; 
         height: 1px;
       }
@@ -152,7 +167,7 @@ function html(strings, ...values) {
       }
 
       #ics-settings input[type="date"] {
-        width: 320px;
+        width: 100%;
         height: 40px;
         border: 1px solid #ccc;
         border-radius: 5px;
@@ -170,6 +185,18 @@ function html(strings, ...values) {
         justify-content: center;
         gap: 10px;
         align-self: center;
+      }
+
+      #ics-button-container a {
+        font-size: 16px;
+        width: 135px;
+      }
+
+      .input-container {
+        display: flex; 
+        flex-direction: column; 
+        justify-content: left;
+        width: 100%;
       }
 
       .switch {
@@ -229,6 +256,7 @@ function html(strings, ...values) {
 
 
   const startDateInput = document.getElementById('ics-start-date');
+  const endDateInput = document.getElementById('ics-end-date');
   const shortenCheckboxLabel = document.getElementById('shorten-course-checkbox');
   const shortenCheckbox = shortenCheckboxLabel.querySelector('input[type="checkbox"]');
   const downloadButton = document.getElementById('ics-download');
@@ -245,19 +273,22 @@ function html(strings, ...values) {
     }
   });
 
-  startDateInput.addEventListener('input', (event) => {
-    if (startDateInput.value.trim() !== '') {
+  startDateInput.addEventListener('input', checkDownloadButtonRequirements);
+  endDateInput.addEventListener('input', checkDownloadButtonRequirements);
+
+  function checkDownloadButtonRequirements() {
+    if (startDateInput.value.trim() !== '' && endDateInput.value.trim() !== '') {
       downloadButton.classList.remove('aspNetDisabled');
     } else {
       downloadButton.classList.add('aspNetDisabled');
     }
-  });
+  }
 
   shortenCheckboxLabel.addEventListener('change', () => {
     if (shortenCheckbox.checked) {
-      shortenCheckboxLabel.nextSibling.textContent = ` "CMPSC 16" `;
+      shortenCheckboxLabel.nextSibling.textContent = ` "MATH 1A" `;
     } else {
-      shortenCheckboxLabel.nextSibling.textContent = ` "CMPSC 16 - PROBLEM SOLVING 1" `;
+      shortenCheckboxLabel.nextSibling.textContent = ` "MATH 1A - LEARNING FRACTIONS" `;
     }
   });
 
