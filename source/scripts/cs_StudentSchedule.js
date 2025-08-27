@@ -71,6 +71,10 @@ function html(strings, ...values) {
       <div class="input-container">
         <span>First MONDAY of the quarter? *</span>
         <input id="ics-start-date" type=date>
+        <div style="margin-top: 2px">
+          <u>🛈 First/last day of instruction found in </u>
+          <a href="https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx#:~:text=First%20Day%20of%20Instruction%3A" target="_blank" rel="noopender noreferrer">registration info.</a>
+        </div>
       </div>
       <div class="input-container">
         <span>Last FRIDAY of the quarter? *</span>
@@ -86,7 +90,7 @@ function html(strings, ...values) {
           "MATH 1A - LEARNING FRACTIONS 101"
         </div>
       </div>
-      <div class="input-container">
+      <!-- <div class="input-container">
         <span>Include course finals? (WIP)</span>
         <div>
           <label id="include-finals-checkbox" class="switch" style="margin-right: 10px">
@@ -95,7 +99,7 @@ function html(strings, ...values) {
           </label>
           Feature not available yet.
         </div>
-      </div>
+      </div> -->
       <div id="ics-button-container">
         <a id="ics-download" class="aspNetDisabled gold-button" href="">Download</a>
         <a id="ics-cancel" class="gold-button" href="">Cancel</a>
@@ -165,6 +169,10 @@ function html(strings, ...values) {
         font-weight: normal;
         font-size: 18px;
         color: ${HEADER_COLOR};
+      }
+
+      #ics-settings u {
+        text-decoration: none;
       }
 
       #ics-settings input[type="date"] {
