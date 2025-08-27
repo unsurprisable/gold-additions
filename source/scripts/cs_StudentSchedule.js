@@ -101,7 +101,7 @@ function html(strings, ...values) {
         </div>
       </div> -->
       <div id="ics-button-container">
-        <a id="ics-download" class="aspNetDisabled gold-button" href="https://calendar.google.com/calendar/r/settings/createcalendar?pli=1" target="_blank" ref="noopener norefferer">Download</a>
+        <a id="ics-download" class="aspNetDisabled gold-button" href="https://calendar.google.com/calendar/r/settings/export?pli=1" target="_blank" ref="noopener norefferer">Download</a>
         <a id="ics-cancel" class="gold-button" href="">Cancel</a>
       </div>
     </div>
@@ -304,6 +304,7 @@ function html(strings, ...values) {
 
   downloadButton.addEventListener('click', (event) => {
     if (downloadButton.classList.contains('aspNetDisabled')) {
+      event.preventDefault();
       return; // prob not the best way to do this but wtv
     }
     console.log("Generating calendar...");
