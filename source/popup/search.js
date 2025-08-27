@@ -6,7 +6,7 @@ function handleSearch(inputProfName) {
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     const input = document.getElementById('search');
-    input.focus(); // this makes it 100x more convenient by autoselecting the input automaticall;y :D
+    input.focus();
     form.onsubmit = function(e) {
         e.preventDefault();
         handleSearch(input.value);
