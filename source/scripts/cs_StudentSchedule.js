@@ -6,7 +6,7 @@ function html(strings, ...values) {
 
 (() => {
   console.log("Student Schedule");
-  
+
   const BUTTON_COLOR = "#2280bf";
   const HEADER_COLOR = "#00468b";
 
@@ -308,7 +308,7 @@ function html(strings, ...values) {
   cancelButton.addEventListener('click', (event) => {
     event.preventDefault();
     hideCalendarContext();
-    
+
     console.log("[DEBUG] Generating calendar...");
     generateIcsData();
   });
@@ -459,14 +459,16 @@ function html(strings, ...values) {
 
   class Meeting {
     /**
-     * @param {string} name
-     * @param {string} professor
-     * @param {string} days
-     * @param {string} time
-     * @param {string} location
-     * @param {string} courseID
-     * @param {string} grading
-     * @param {string} units
+     * Used to store and modify course data in its raw HTML form.
+     * 
+     * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
+     * @param {string} professor  MAJEDI M
+     * @param {string} days       M W
+     * @param {string} time       2:00 PM-3:15 PM
+     * @param {string} location   Harold Frank Hall, 1104
+     * @param {string} courseID   07682
+     * @param {string} grading    L
+     * @param {string} units      4.0
      */
     constructor(name, professor, days, time, location, courseID, grading, units) {
       this.name = name;
@@ -480,44 +482,36 @@ function html(strings, ...values) {
     }
 
     /**
-     * "HH:mm [A/P]M" --> "YYYYMMDDTHHmmss"
-     * @param {string} time
-     * @returns {string}
+     * Converts "HH:mm PM" to {hours, minutes} in 24hr time
+     * @param {string} time 
+     * @returns {{hours: number, minutes: number}}
      */
-    getIcsTime(time) {
-      let hours = time.substring(0, time.indexOf(':'));
+    convertTime(time) {
+      let separatorIndex = time.indexOf(':');
+      let hours = parseInt(time.substring(0, separatorIndex));
+      let minutes = parseInt(time.substring(separatorIndex + 1, separatorIndex + 3));
 
       // convert 12 hour clock to 24 hour clock
-      if (hours !== "12" && time.split(' ')[1] === 'PM') {
-        const adjustedHours = parseInt(hours, 10) + 12;
-        hours = adjustedHours.toString();
+      if (hours !== 12 && time.split(' ')[1] === 'PM') {
+        hours += 12;
       } else if (hours === "12" && time.split(' ')[1] === 'AM') {
-        hours = "00";
+        hours = 0;
       }
 
-      // append "0" before any time 1-9AM to conform with .ics time formatting
-      if (parseInt(hours, 10) < 10) {
-        hours = '0' + hours;
-      }
-      let minutes = time.substring(time.indexOf(':') + 1, time.indexOf(' '));
-
-      return `${QUARTER_START_YEAR}${QUARTER_START_MONTH}${QUARTER_START_DAY}T${hours}${minutes}00`;
+      return { hours: hours, minutes: minutes };
     }
 
     /**
-     * @param {string} days
+     * 2025-00-25T10:25:30.000Z --> 20250125T102530
+     * @param {string} isoDatetime 
      * @returns {string}
      */
-    getIcsDays(days) {
-      const dayMap = {
-        M: "MO",
-        T: "TU",
-        W: "WE",
-        R: "TH",
-        F: "FR",
-      }
+    convertISOToICS(isoDatetime) {
+      let icsDatetime = isoDatetime.split('.')[0];
+      icsDatetime = icsDatetime.replaceAll('-', '');
+      icsDatetime = icsDatetime.replaceAll(':', '');
 
-      return days.split(' ').map(d => dayMap[d]).join(',');
+      return icsDatetime;
     }
 
     /**
@@ -536,9 +530,33 @@ function html(strings, ...values) {
           data.summary = this.name.substring(0, hyphenIndex - 1);
         }
       }
-      data.dtStart = this.getIcsTime(this.time.substring(0, this.time.indexOf('-')));
-      data.dtEnd = this.getIcsTime(this.time.substring(this.time.indexOf('-') + 1));
-      data.days = this.getIcsDays(this.days);
+
+      const dayMap = {
+        M: { day: "MO", daysFromMon: 0 },
+        T: { day: "TU", daysFromMon: 1 },
+        W: { day: "WE", daysFromMon: 2 },
+        R: { day: "TH", daysFromMon: 3 },
+        F: { day: "FR", daysFromMon: 4 }
+      }
+
+      const startTime = this.convertTime(this.time.substring(0, this.time.indexOf('-')));
+      const startDatetime = new Date();
+      startDatetime.setUTCFullYear(parseInt(QUARTER_START_YEAR), parseInt(QUARTER_START_MONTH) - 1, parseInt(QUARTER_START_DAY));
+      startDatetime.setUTCHours(startTime.hours, startTime.minutes, 0, 0);
+
+      // avoid bug where all events get stacked onto the first monday
+      const firstDayOffset = dayMap[this.days.split(' ')[0]].daysFromMon;
+      startDatetime.setUTCDate(startDatetime.getUTCDate() + firstDayOffset);
+
+      console.log(this.name, startDatetime.toISOString());
+
+      const endTime = this.convertTime(this.time.substring(this.time.indexOf('-') + 1));
+      const endDatetime = new Date(startDatetime);
+      endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
+
+      data.dtStart = this.convertISOToICS(startDatetime.toISOString());
+      data.dtEnd = this.convertISOToICS(endDatetime.toISOString());
+      data.days = this.days.split(' ').map(d => dayMap[d].day).join(',')
       data.untilDate = `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T235959`
       data.location = this.location;
       data.description = `Professor: ${this.professor}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`;
