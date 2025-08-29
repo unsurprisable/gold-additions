@@ -1,39 +1,41 @@
-# GOLD x RateMyProfessor
-Allows you to click on professor's names in GOLD to instantly view their RateMyProfessor page.
+# GOLD Additions
 
-### This extension only works for UCSB's GOLD registration system!
+### The Chrome Extension can be found at: [still under review]
 
 ***
 
 ![ezgif-6e133ed31c42ec](https://github.com/user-attachments/assets/def35bcf-9f39-4bc9-a49d-dc444d213503)
 
+## Description
+> Only applicable to students currently enrolled at the University of California, Santa Barbara!
+
+GOLD Additions is a side-project of mine that's meant to simplify some tedious tasks I found myself doing while preparing my course schedule on GOLD.
+
+Current features:
+* Click a professor's name to instantly open a RateMyProfessor search
+* Instantly export course schedule to a digital calendar (Outlook, Google, Apple, etc.)
+* Lightweight: only runs on GOLD pages
+
+I'm completely open to feature suggestions and will probably update the extension whenever I think of one!
+
+> **DISCLAIMER**: This extension improves the user experience of GOLD, a service provided to students at the University of California, Santa Barbara (UCSB). If you are not a student enrolled at UCSB, this extension has no use. This is an independent project and is not affiliated with or endorsed by UCSB or RateMyProfessor.
+
+
+
+
 
 ## Installation
-im not paying $5 to upload it to the chrome web store 😭
-
-1. Click on the [latest release](https://github.com/unsurprisable/gold-rmp-extension/releases/latest) under <b>Releases</b> on the right.
-2. Download and extract the ZIP file named "gold-rmp-v..."
-3. Open Chrome and type [chrome://extensions]() into the search bar.
-4. On the top right, flip the "Developer mode" switch so that it's enabled.
-5. Click "Load unpacked" at the top left and select the "source" folder in the extracted ZIP file.
-6. shabang that's it, just remember if you move the folder you'll have to re-do Step 5.
-
-## How to Use
-* Just click on the professor's name.
-* This works for all courses listed on the "MY SCHEDULE" and "FIND COURSES" pages.
-* Unfortunately, RateMyProfessor's search isn't perfect and your professor sometimes won't be the very first result.
+Get the extension from the Chrome Web Store: [still under review]
   
 ![ezgif-8ed1a734e0159e](https://github.com/user-attachments/assets/d1619285-80bc-49d2-9091-92c65d76035f)
 ***
 ## How It Works
 The extension only functions while actively browsing https://my.sa.ucsb.edu/gold.
 
-The program simply searches for the exact HTML elements that typically display the professors' names. Once it finds one, the original element gets replaced with a link to a RateMyProfessor search of that professor's name. Nothing else is modified and there is no visual indication other than the names being clickable.
+The program uses content scripts to read and write to the DOM. All functionality is gained by scraping the HTML data of the website; no external scripts or API calls are made. 
 
-In the future, I'd like to add a little icon next to professors' names that displays their ratings directly on GOLD, but as of now I don't believe RateMyProfessor hosts any API endpoints that would enable me to add something like that.
+The RateMyProfessor implementation was quite simple. The program algorithmically locates all of the HTML elements that display a professor's name and simply replaces them with RateMyProfessor links instead.
 
-## uhhh
-maybe ill start a $5 gofundme to add this to the chrome web store
+The calendar implementation was quite a bit more complicated. If you check **source/scripts/cs_StudentSchedule** you can see that the file is quite large compared to the other content script... that's because it contains all of the JavaScript, HTML, and CSS related to generating and injecting the Schedule Exporter into the website. Could I have separated all of the HTML and CSS into their own file? honestly yeah probably but whatever 🤷‍♂️
 
-lmk 👍
-
+(i'll probably put more here whenever i add a new feature)
