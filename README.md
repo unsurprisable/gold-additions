@@ -1,15 +1,16 @@
-# GOLD Additions
+# GOLD Additions - [Chrome Extension]
 
-### The Chrome Extension can be found at: [still under review]
+IT ACTUALLY GOT APPROVED FOR THE CHROME WEB STORE 🥳🎉🎉
+### The Chrome Extension can be installed here: [GOLD Additions](https://chromewebstore.google.com/detail/dddhnnlmjoklomkkfcaegidmdbiijigl?utm_source=item-share-cb)
 
 ***
 
 ![ezgif-6e133ed31c42ec](https://github.com/user-attachments/assets/def35bcf-9f39-4bc9-a49d-dc444d213503)
 
 ## Description
-> Only applicable to students currently enrolled at the University of California, Santa Barbara!
+* **NOTE: This extension can only be utilized by current students at the University of California, Santa Barbara**
 
-GOLD Additions is a side-project of mine that's meant to simplify some tedious tasks I found myself doing while preparing my course schedule on GOLD.
+GOLD Additions is a fun little side-project of mine that's meant to simplify some tedious tasks I found myself doing while preparing my course schedule. The extension adds a few features to the GOLD webpage that can help students plan, create, and organize their class schedule. (I originally made the extension for myself but figured I might as well upload it since other people could benefit from it!)
 
 Current features:
 * Click a professor's name to instantly open a RateMyProfessor search
@@ -25,7 +26,7 @@ I'm completely open to feature suggestions and will probably update the extensio
 
 
 ## Installation
-Get the extension from the Chrome Web Store: [still under review]
+Get the extension from the Chrome Web Store: [GOLD Additions](https://chromewebstore.google.com/detail/dddhnnlmjoklomkkfcaegidmdbiijigl?utm_source=item-share-cb)
   
 ![ezgif-8ed1a734e0159e](https://github.com/user-attachments/assets/d1619285-80bc-49d2-9091-92c65d76035f)
 ***
