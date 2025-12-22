@@ -1,0 +1,30 @@
+{
+  "name": "gold-additions",
+  "version": "1.2.0",
+  "private": true,
+  "description": "IT ACTUALLY GOT APPROVED FOR THE CHROME WEB STORE 🥳🎉🎉\r ### The Chrome Extension can be installed here: [GOLD Additions](https://chromewebstore.google.com/detail/dddhnnlmjoklomkkfcaegidmdbiijigl?utm_source=item-share-cb)",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "zip": "powershell -NoProfile -Command \"New-Item -ItemType Directory -Force -Path dist; Compress-Archive -Path source/* -DestinationPath dist/gold-additions.zip -Force\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unsurprisable/gold-additions.git"
+  },
+  "author": "",
+  "license": "GPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/unsurprisable/gold-additions/issues"
+  },
+  "homepage": "https://github.com/unsurprisable/gold-additions#readme",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "globals": "^16.5.0"
+  }
+}
