@@ -3,7 +3,7 @@
   "description": "Quality of life implementations into UCSB's course registration system GOLD",
   "version": "1.2.0",
   "action": {
-    "default_popup": "popup/search.html",
+    "default_popup": "html/popup.html",
     "default_icon": "icons/icon128.png"
   },
   "icons": {

@@ -1,3 +1,5 @@
+/* global chrome, SEARCH_URL */
+
 function handleSearch(inputProfName) {
     const url = SEARCH_URL + encodeURIComponent(inputProfName.trim());
     window.open(url, '_blank');
