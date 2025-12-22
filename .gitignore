@@ -1,1 +1,29 @@
+## OS artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+## Node dependencies and logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+## Build outputs
+dist/
+build/
+
+## Coverage and caches
+coverage/
+.eslintcache
+.cache/
+
+## VS Code workspace
+.vscode/
+
+## Chrome extension artifacts
 *.zip
+*.crx
+*.pem
