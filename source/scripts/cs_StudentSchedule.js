@@ -1,5 +1,6 @@
 
 // for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
+// eslint-disable-next-line no-unused-vars
 function html(strings, ...values) {
   return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
 }
@@ -19,25 +20,11 @@ function html(strings, ...values) {
   let QUARTER_END_MONTH = null;
   let QUARTER_END_DAY = null;
 
-  /** @type {Element[]} */
-  const scheduleItems = document.querySelectorAll('.scheduleItem');
-
   /** @type {Element} */
   const scheduleContainer = document.querySelector('#div_Schedule_Container')
 
   /** @type {Element[]} */
   const currentScheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)')
-
-  // Replacing professor names with links
-  const profTextNodes = findProfessorNodes();
-
-  profTextNodes.forEach(profTextNode => {
-    const profName = profTextNode?.textContent.trim();
-    if (profName && profNameIsValid(profName)) {
-      const link = createRmpLink(profName);
-      profTextNode.replaceWith(link);
-    }
-  });
 
   // Calendar button
   const buttonContainer = document.createElement('div');
@@ -316,7 +303,6 @@ function html(strings, ...values) {
   cancelButton.addEventListener('click', (event) => {
     event.preventDefault();
     hideCalendarContext();
-
     console.log("[DEBUG] Generating calendar...");
     generateIcsData();
   });
@@ -330,33 +316,6 @@ function html(strings, ...values) {
     setTimeout(() => {
       backdrop.classList.add('menu-hidden');
     }, SETTINGS_ANIMATION_TIME);
-  }
-
-
-
-  /**
-   * @returns {ChildNode[]}
-   */
-  function findProfessorNodes() {
-    const profNodes = [];
-
-    // bruh its been like a month and i have no idea what is happening here its so ugly but it works
-    scheduleItems.forEach(schedule => {
-      const possibleInstructorLabels = schedule.querySelectorAll('label.visible-xs')
-      possibleInstructorLabels.forEach(label => {
-        if (label.textContent.trim() === "Instructor") {
-          const instructorLabel = label.parentElement;
-
-          instructorLabel.childNodes.forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE) {
-              profNodes.push(node);
-            }
-          });
-        }
-      })
-    });
-
-    return profNodes;
   }
 
   /** 

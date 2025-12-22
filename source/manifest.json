@@ -12,12 +12,23 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://my.sa.ucsb.edu/gold/ResultsFindCourses.aspx"],
-      "js": ["scripts/utils.js", "scripts/cs_FindCourses.js"]
+      "matches": [
+        "https://my.sa.ucsb.edu/gold/ResultsFindCourses.aspx"
+      ],
+      "js": [
+        "scripts/utils.js",
+        "scripts/cs_FindCourses.js"
+      ]
     },
     {
-      "matches": ["https://my.sa.ucsb.edu/gold/StudentSchedule.aspx"],
-      "js": ["scripts/utils.js", "scripts/cs_StudentSchedule.js"]
+      "matches": [
+        "https://my.sa.ucsb.edu/gold/StudentSchedule.aspx"
+      ],
+      "js": [
+        "scripts/utils.js",
+        "scripts/cs_StudentSchedule.js",
+        "scripts/professorLink.js"
+      ]
     }
   ],
   "manifest_version": 3
