@@ -112,8 +112,6 @@ function html(strings, ...values) {
       cancelButton.addEventListener('click', (event) => {
         event.preventDefault();
         hideCalendarContext();
-        console.log("[DEBUG] Generating calendar...");
-        generateIcsData();
       });
 
       function generateIcsData() {
@@ -142,7 +140,6 @@ function html(strings, ...values) {
   document.body.appendChild(backdrop);
 
   function showCalendarContext() {
-    console.log("Showing calendar settings...");
     backdrop.classList.remove('menu-hidden');
     backdrop.classList.add('menu-visible')
   }
