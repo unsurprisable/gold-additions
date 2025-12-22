@@ -1,3 +1,4 @@
+/* global chrome */
 
 // for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
 // eslint-disable-next-line no-unused-vars

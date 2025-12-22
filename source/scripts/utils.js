@@ -1,8 +1,10 @@
+/* exported profNameIsValid, createRmpLink */
+
 const SEARCH_URL = 'https://www.ratemyprofessors.com/search/professors/1077?q='
 
 function profNameIsValid(profName) {
   const name = profName.toLowerCase().trim();
-  const INVALID_PROF_NAMES = ['cancel', 't.b.a', 't.b.a.'];
+  const INVALID_PROF_NAMES = [ 'cancel', 't.b.a', 't.b.a.' ];
   return !INVALID_PROF_NAMES.includes(name);
 }
 

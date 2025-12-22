@@ -1,3 +1,6 @@
+// from utils.js
+  /* global profNameIsValid, createRmpLink */
+
 (() => {
   console.log("Find Courses");
   
