@@ -11,18 +11,12 @@ function html(strings, ...values) {
   /**
    * div
    * └─ label.visible-xs ("Instructor") <- instructorLabels[i]
-   * └─ "HOELLE J" <- target
-   * 
-   * Note: not 100% safe, could break if the structure changes
+   * └─ "MIRZA D" <- target
    */
   const instructorLabels = Array.from(document.querySelectorAll('label.visible-xs'))
     .filter(label => label.textContent === 'Instructor');
-  
+
   instructorLabels.forEach(label => {
-    label.parentNode.childNodes.forEach(node => {
-      if (!(node.nodeType === Node.ELEMENT_NODE && node.matches('label.visible-xs'))) {
-        convertNodeToRmpLink(node);
-      }
-    });
+    convertNodeToRmpLink(label.nextSibling);
   });
 })();
