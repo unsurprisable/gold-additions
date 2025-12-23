@@ -17,7 +17,7 @@
       ],
       "js": [
         "scripts/utils.js",
-        "scripts/professorLink.js"
+        "scripts/instructorLink.js"
       ]
     },
     {
@@ -27,7 +27,7 @@
       "js": [
         "scripts/utils.js",
         "scripts/StudentSchedule.js",
-        "scripts/professorLink.js"
+        "scripts/instructorLink.js"
       ]
     }
   ],
