@@ -106,6 +106,7 @@ function html(strings, ...values) {
           event.preventDefault();
           return; // prob not the best way to do this but wtv
         }
+        console.log('Generating ICS file data...');
         getFormInput();
         const icsFileData = generateIcsData();
         downloadCalendar('GOLD Schedule Calendar', icsFileData);
@@ -113,6 +114,13 @@ function html(strings, ...values) {
       });
 
       cancelButton.addEventListener('click', (event) => {
+        if (!downloadButton.classList.contains('aspNetDisabled')) {
+          console.log('Debug: Generating ICS file data...');
+          getFormInput();
+          generateIcsData();
+        } else {
+          console.log('Debug: Not generating ICS file data (requirements not met)');
+        }
         event.preventDefault();
         hideCalendarContext();
       });
@@ -167,7 +175,7 @@ function html(strings, ...values) {
      * >> .children[1] - list of all enrolled lectures/sections      | classes
      * >>> .children[*]                                              |
      * >>>> .children[0,1,2,4] - {days, time, location, professor}   |
-     * >>>>> .childNodes[2] - raw text data for the above            |
+     * >>>>> .childNodes[2...] - raw text data for the above         |
      */
     currentScheduleItems.forEach((scheduleItem) => {
       const courseInfo = scheduleItem.children[1].children[0].children[0];
@@ -183,7 +191,11 @@ function html(strings, ...values) {
         const classInfo = classes.children[i];
 
         const name = scheduleItem.children[0].textContent.trim().replace(/\s+/g, ' '); // cut out the random extra spaces
-        const professor = classInfo.children[4].childNodes[2].textContent.trim();
+        const professor = Array.from(classInfo.children[4].childNodes) // possibility of multiple professors (eg. ENGR 13A)
+          .slice(2)
+          .map((n) => n.textContent.trim())
+          .filter(Boolean)
+          .join(', ');
         const days = classInfo.children[0].childNodes[2].textContent.trim();
         const time = classInfo.children[1].childNodes[2].textContent.trim();
         const location = classInfo.children[2].childNodes[2].textContent.trim();
@@ -208,7 +220,13 @@ function html(strings, ...values) {
    * @property {string} location
    * @property {string} description
    */
+
+
+  // TODO: Meeting rename to CourseClass, create class FinalExam (sibling?), both implement getMeetingIcsData
   class Meeting {
+    static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
+    static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
+
     /**
      * Used to store and modify course data in its raw HTML form.
      * 
@@ -260,40 +278,34 @@ function html(strings, ...values) {
      * @returns {MeetingIcsData}
      */
     getMeetingIcsData() {
-      const data = {};
+      const dayMap = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
+      const dayOffset = { M: 0, T: 1, W: 2, R: 3, F: 4 };
 
-      if (SHORT_COURSE_NAMES) data.summary = this.name.split(' - ')[0];
-      else data.summary = this.name;
+      const [startTime, endTime] = this.time.split('-').map(t => this.convertTime(t.trim()));
+      const days = this.days.split(' ');
+      const startDatetime = new Date(Date.UTC(
+        parseInt(QUARTER_START_YEAR, 10),
+        parseInt(QUARTER_START_MONTH, 10) - 1,
+        parseInt(QUARTER_START_DAY, 10),
+        startTime.hours,
+        startTime.minutes,
+      ));
+      startDatetime.setUTCDate(startDatetime.getUTCDate() + dayOffset[days[0]]);
 
-      const dayMap = {
-        M: { day: 'MO', daysFromMon: 0 },
-        T: { day: 'TU', daysFromMon: 1 },
-        W: { day: 'WE', daysFromMon: 2 },
-        R: { day: 'TH', daysFromMon: 3 },
-        F: { day: 'FR', daysFromMon: 4 },
-      };
-
-      const startTime = this.convertTime(this.time.substring(0, this.time.indexOf('-')));
-      const startDatetime = new Date();
-      startDatetime.setUTCFullYear(parseInt(QUARTER_START_YEAR, 10), parseInt(QUARTER_START_MONTH, 10) - 1, parseInt(QUARTER_START_DAY, 10));
-      startDatetime.setUTCHours(startTime.hours, startTime.minutes, 0, 0);
-
-      // avoid bug where all events get stacked onto the first monday
-      const firstDayOffset = dayMap[this.days.split(' ')[0]].daysFromMon;
-      startDatetime.setUTCDate(startDatetime.getUTCDate() + firstDayOffset);
-
-      const endTime = this.convertTime(this.time.substring(this.time.indexOf('-') + 1));
       const endDatetime = new Date(startDatetime);
       endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
+      const summary = SHORT_COURSE_NAMES ? this.name.split('-')[0].trim() : this.name;
 
-      data.dtStart = this.convertISOToICS(startDatetime.toISOString());
-      data.dtEnd = this.convertISOToICS(endDatetime.toISOString());
-      data.days = this.days.split(' ').map((d) => dayMap[d].day).join(',');
-      data.untilDate = `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T235959`;
-      data.location = this.location;
-      data.description = `Professor: ${this.professor}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`;
+      return {
+        summary,
+        dtStart: this.convertISOToICS(startDatetime.toISOString()),
+        dtEnd: this.convertISOToICS(endDatetime.toISOString()),
+        days: days.map((d) => dayMap[d]).join(','),
+        untilDate: `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T235959`,
+        location: this.location,
+        description: `Professor: ${this.professor.split('\n').join(', ')}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`,
 
-      return data;
+      };
     }
 
     /**
