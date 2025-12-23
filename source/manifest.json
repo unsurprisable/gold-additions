@@ -33,8 +33,13 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["html/ics-settings.html", "css/ics-settings.css"],
-      "matches": ["https://my.sa.ucsb.edu/*"]
+      "resources": [
+        "html/ics-settings.html",
+        "css/ics-settings.css"
+      ],
+      "matches": [
+        "https://my.sa.ucsb.edu/*"
+      ]
     }
   ],
   "manifest_version": 3
