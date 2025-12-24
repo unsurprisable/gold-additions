@@ -214,7 +214,7 @@ function html(strings, ...values) {
 
     const scheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)');
 
-    /**
+    /*
      * FOR FUTURE REFERENCE:
      * Hiearchy starting from scheduleItem:
      * 
@@ -232,7 +232,7 @@ function html(strings, ...values) {
       const courseInfo = scheduleItem.children[1].children[0].children[0];
       const classes = scheduleItem.children[1].children[1];
 
-      /** 
+      /*
        * necessary for distinguishing between Lectures & Sections 
        * (so that they have separate events on the calendar)
        * if the student is in ONLY a lecture or ONLY a section,
@@ -264,7 +264,7 @@ function html(strings, ...values) {
     if (INCLUDE_FINALS) {
       // last line is a note (weird design)
       const finalExamSection = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
-      /**
+      /*
        * hiearchy starting from examItem:
        * 
        * > .children[0] - {course name}       
