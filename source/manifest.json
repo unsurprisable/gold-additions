@@ -29,7 +29,7 @@
       ],
       "js": [
         "scripts/utils.js",
-        "scripts/StudentSchedule.js",
+        "scripts/exportSchedule.js",
         "scripts/instructorLink.js"
       ]
     }
