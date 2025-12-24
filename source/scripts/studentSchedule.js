@@ -5,6 +5,8 @@ function html(strings, ...values) {
   return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
 }
 
+// TODO: add option to include/exclude finals, descriptions, courses
+// TODO: button in Registration page to save quarter dates
 (() => {
   console.log('Student Schedule');
 
@@ -109,7 +111,7 @@ function html(strings, ...values) {
         console.log('Generating ICS file data...');
         getFormInput();
         const icsFileData = generateIcsData();
-        downloadCalendar('GOLD Schedule Calendar', icsFileData);
+        downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
         hideCalendarContext();
       });
 
@@ -153,15 +155,16 @@ function html(strings, ...values) {
     }
   })();
 
-  // TODO: use ics.js to make more readable and standardized
-
   // ===== Data Processing =====
   /**
    * @returns {Meeting[]}
    */
   function scrapeCourses() {
     const meetings = [];
-    const currentScheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)');
+
+    // ===== Lectures and Sections =====
+
+    const scheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)');
 
     /**
      * FOR FUTURE REFERENCE:
@@ -177,7 +180,7 @@ function html(strings, ...values) {
      * >>>> .children[0,1,2,4] - {days, time, location, professor}   |
      * >>>>> .childNodes[2...] - raw text data for the above         |
      */
-    currentScheduleItems.forEach((scheduleItem) => {
+    scheduleItems.forEach((scheduleItem) => {
       const courseInfo = scheduleItem.children[1].children[0].children[0];
       const classes = scheduleItem.children[1].children[1];
 
@@ -203,7 +206,26 @@ function html(strings, ...values) {
         const grading = courseInfo.children[1].textContent.trim().substring(9); // remove 'Grading: ' prefix
         const units = courseInfo.children[2].textContent.trim().substring(0, 3); // remove ' Units' suffix
 
-        meetings.push(new Meeting(name, professor, days, time, location, courseID, grading, units));
+        meetings.push(new CourseClass(name, professor, days, time, location, courseID, grading, units));
+      }
+
+    });
+
+    // ===== Lectures and Sections =====
+
+    // last line is a note (weird design)
+    const finalExamSection = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
+    /**
+     * hiearchy starting from examItem:
+     * 
+     * > .children[0] - {course name}       
+     * > .children[1] - {exam date & time}
+     */
+    finalExamSection.forEach((examItem) => {
+      const name = examItem.children[0].textContent.trim().replace(/\s+/g, ' ');
+      const datetime = examItem.children[1].textContent.trim();
+      if (FinalExam.DATETIME_REGEX.test(datetime)) {
+        meetings.push(new FinalExam(name, datetime));
       }
     });
 
@@ -221,11 +243,116 @@ function html(strings, ...values) {
    * @property {string} description
    */
 
-
-  // TODO: Meeting rename to CourseClass, create class FinalExam (sibling?), both implement getMeetingIcsData
+  /**
+   * Abstract base class for calendar events
+   */
   class Meeting {
     static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
     static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
+    /**
+     * @param {string} time HH:MM AM/PM
+     * @returns {{hours: number, minutes: number}} 24hr format
+     */
+    static to24Hour(time) {
+      const [, h, m, mer] = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      const hours = mer.toUpperCase() === 'PM' ?
+        (h === '12' ? 12 : Number(h) + 12) :
+        (h === '12' ? 0 : Number(h));
+      return { hours, minutes: Number(m) };
+    }
+
+    /**
+     * Convert a Date to ICS datetime (UTC) without separators.
+     * Example: Date(2025-01-25T10:25:30.000Z) -> 20250125T102530
+     * @param {Date} date
+     * @returns {string}
+     */
+    static dateToIcsString(date) {
+      const iso = date.toISOString();
+      let icsDatetime = iso.split('.')[0];
+      icsDatetime = icsDatetime.replaceAll('-', '');
+      icsDatetime = icsDatetime.replaceAll(':', '');
+      return icsDatetime;
+    }
+
+    /**
+     * Escape text for ICS: backslash (except for "\n" sequences), comma, semicolon
+     * @param {string} text
+     * @returns {string}
+     */
+    static escapeText(text) {
+      if (text == null) return '';
+      return String(text)
+        .replace(/\\(?!n)/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,');
+    }
+
+    /**
+     * Generate a simple unique ID for a calendar object.
+     * @returns {string}
+     */
+    static generateUid() {
+      return `${Date.now()}-${Math.random().toString(36).slice(2)}@gold-additions`;
+    }
+
+    /**
+     * Must be implemented by subclasses
+     * @returns {MeetingIcsData}
+     */
+    getMeetingIcsData() {
+      throw new Error('getMeetingIcsData must be implemented by subclass');
+    }
+
+    /**
+     * Must be implemented by subclasses
+     * @returns {string}
+     */
+    toIcsEvent() {
+      throw new Error('toIcsEvent must be implemented by subclass');
+    }
+
+    /**
+     * @param {Meeting[]} events
+     * @returns {string}
+     */
+    static toIcsCalendar(events) {
+      const body = events.map((e) => e.toIcsEvent()).join('\n');
+      const vtimezone = [
+        'BEGIN:VTIMEZONE',
+        'TZID:America/Los_Angeles',
+        'X-LIC-LOCATION:America/Los_Angeles',
+        'BEGIN:DAYLIGHT',
+        'TZOFFSETFROM:-0800',
+        'TZOFFSETTO:-0700',
+        'TZNAME:PDT',
+        'DTSTART:19700308T020000',
+        'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+        'END:DAYLIGHT',
+        'BEGIN:STANDARD',
+        'TZOFFSETFROM:-0700',
+        'TZOFFSETTO:-0800',
+        'TZNAME:PST',
+        'DTSTART:19701101T020000',
+        'RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU',
+        'END:STANDARD',
+        'END:VTIMEZONE'
+      ].join('\n');
+      return [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//gold-additions//UCSB GOLD Export//EN',
+        vtimezone,
+        body,
+        'END:VCALENDAR'
+      ].join('\n');
+    }
+  }
+
+  /**
+   * Represents a recurring course meeting (lecture/section)
+   */
+  class CourseClass extends Meeting {
 
     /**
      * Used to store and modify course data in its raw HTML form.
@@ -240,6 +367,7 @@ function html(strings, ...values) {
      * @param {string} units      4.0
      */
     constructor(name, professor, days, time, location, courseID, grading, units) {
+      super();
       this.name = name;
       this.professor = professor;
       this.days = days;
@@ -251,57 +379,40 @@ function html(strings, ...values) {
     }
 
     /**
-     * @param {string} time HH:MM AM/PM
-     * @returns {{hours: number, minutes: number}} 24hr format
-     */
-    convertTime(time) {
-      const [, h, m, mer] = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-      const hours = mer.toUpperCase() === 'PM' ?
-        (h === '12' ? 12 : Number(h) + 12) :
-        (h === '12' ? 0 : Number(h));
-      return { hours, minutes: Number(m) };
-    }
-
-    /**
-     * 2025-01-25T10:25:30.000Z --> 20250125T102530
-     * @param {string} isoDatetime 
-     * @returns {string}
-     */
-    convertISOToICS(isoDatetime) {
-      let icsDatetime = isoDatetime.split('.')[0];
-      icsDatetime = icsDatetime.replaceAll('-', '');
-      icsDatetime = icsDatetime.replaceAll(':', '');
-      return icsDatetime;
-    }
-
-    /**
      * @returns {MeetingIcsData}
      */
     getMeetingIcsData() {
-      const dayMap = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
-      const dayOffset = { M: 0, T: 1, W: 2, R: 3, F: 4 };
+      // Use static maps defined on CourseClass
 
-      const [startTime, endTime] = this.time.split('-').map(t => this.convertTime(t.trim()));
+      const [startTime, endTime] = this.time.split('-').map(t => Meeting.to24Hour(t.trim()));
       const days = this.days.split(' ');
       const startDatetime = new Date(Date.UTC(
-        parseInt(QUARTER_START_YEAR, 10),
-        parseInt(QUARTER_START_MONTH, 10) - 1,
-        parseInt(QUARTER_START_DAY, 10),
+        Number(QUARTER_START_YEAR),
+        Number(QUARTER_START_MONTH) - 1,
+        Number(QUARTER_START_DAY),
         startTime.hours,
         startTime.minutes,
       ));
-      startDatetime.setUTCDate(startDatetime.getUTCDate() + dayOffset[days[0]]);
+      startDatetime.setUTCDate(startDatetime.getUTCDate() + Meeting.DAY_OFFSET[days[0]]);
 
       const endDatetime = new Date(startDatetime);
       endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
       const summary = SHORT_COURSE_NAMES ? this.name.split('-')[0].trim() : this.name;
 
+      // Compute UNTIL as end of quarter date in UTC (23:59:59Z)
+      const untilUtc = new Date(Date.UTC(
+        Number(QUARTER_END_YEAR),
+        Number(QUARTER_END_MONTH) - 1,
+        Number(QUARTER_END_DAY),
+        23, 59, 59
+      ));
+
       return {
         summary,
-        dtStart: this.convertISOToICS(startDatetime.toISOString()),
-        dtEnd: this.convertISOToICS(endDatetime.toISOString()),
-        days: days.map((d) => dayMap[d]).join(','),
-        untilDate: `${QUARTER_END_YEAR}${QUARTER_END_MONTH}${QUARTER_END_DAY}T235959`,
+        dtStart: Meeting.dateToIcsString(startDatetime),
+        dtEnd: Meeting.dateToIcsString(endDatetime),
+        days: days.map((d) => Meeting.DAY_MAP[d]).join(','),
+        untilDate: `${Meeting.dateToIcsString(untilUtc)}Z`,
         location: this.location,
         description: `Professor: ${this.professor.split('\n').join(', ')}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`,
 
@@ -313,25 +424,101 @@ function html(strings, ...values) {
      */
     toIcsEvent() {
       const data = this.getMeetingIcsData();
-      return `BEGIN:VEVENT
-SUMMARY:${data.summary}
-DTSTART;TZID=America/Los_Angeles:${data.dtStart}
-DTEND;TZID=America/Los_Angeles:${data.dtEnd}
-RRULE:FREQ=WEEKLY;BYDAY=${data.days};UNTIL=${data.untilDate}
-LOCATION:${data.location}
-DESCRIPTION:${data.description}
-END:VEVENT`;
+      const uid = Meeting.generateUid();
+      const dtStamp = `${Meeting.dateToIcsString(new Date())}Z`;
+      return [
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `SUMMARY:${Meeting.escapeText(data.summary)}`,
+        `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
+        `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
+        `RRULE:FREQ=WEEKLY;BYDAY=${data.days};UNTIL=${data.untilDate}`,
+        `LOCATION:${Meeting.escapeText(data.location)}`,
+        `DESCRIPTION:${Meeting.escapeText(data.description)}`,
+        'END:VEVENT'
+      ].join('\n');
+    }
+  }
+
+  /**
+   * Represents a final exam (single non-recurring event)
+   */
+  class FinalExam extends Meeting {
+    static DATETIME_REGEX = /^\w+,\s+(\w+)\s+(\d+),\s+(\d{4})\s+(.+)$/;
+    /**
+     * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
+     * @param {string} datetime   Thursday, March 19, 2026 12:00 PM - 3:00 PM
+     */
+    constructor(name, datetime) {
+      super();
+      this.name = name;
+      this.datetime = datetime;
     }
 
     /**
-     * @param {Meeting[]} meetings
+     * @returns {MeetingIcsData}
+     */
+    getMeetingIcsData() {
+      // Parse: "Thursday, March 19, 2026 12:00 PM - 3:00 PM"
+      const monthMap = {
+        January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+        July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
+      };
+
+      // Extract components: DayOfWeek, Month Day, Year Time - Time
+      const match = this.datetime.match(FinalExam.DATETIME_REGEX);
+      if (!match) {
+        throw new Error(`Invalid datetime format: ${this.datetime}`);
+      }
+      const [, monthName, day, year, timeRange] = match;
+      const [startTimeStr, endTimeStr] = timeRange.split('-').map(t => t.trim());
+
+      const startTime = Meeting.to24Hour(startTimeStr);
+      const endTime = Meeting.to24Hour(endTimeStr);
+
+      const startDatetime = new Date(Date.UTC(
+        Number(year),
+        monthMap[monthName],
+        Number(day),
+        startTime.hours,
+        startTime.minutes,
+      ));
+
+      const endDatetime = new Date(startDatetime);
+      endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
+
+      const summary = SHORT_COURSE_NAMES ? `${this.name.split('-')[0].trim()} - Final Exam` : `${this.name} - Final Exam`;
+
+      return {
+        summary,
+        dtStart: Meeting.dateToIcsString(startDatetime),
+        dtEnd: Meeting.dateToIcsString(endDatetime),
+        days: '', // Not used for single events
+        untilDate: '', // Not used for single events
+        location: '',
+        description: '',
+      };
+    }
+
+    /**
      * @returns {string}
      */
-    static toIcsCalendar(meetings) {
-      return `BEGIN:VCALENDAR
-VERSION:2.0
-${meetings.map((m) => m.toIcsEvent()).join('\n')}
-END:VCALENDAR`;
+    toIcsEvent() {
+      const data = this.getMeetingIcsData();
+      const uid = Meeting.generateUid();
+      const dtStamp = `${Meeting.dateToIcsString(new Date())}Z`;
+      return [
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `SUMMARY:${Meeting.escapeText(data.summary)}`,
+        `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
+        `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
+        `LOCATION:${Meeting.escapeText(data.location)}`,
+        `DESCRIPTION:${Meeting.escapeText(data.description)}`,
+        'END:VEVENT'
+      ].join('\n');
     }
   }
 
