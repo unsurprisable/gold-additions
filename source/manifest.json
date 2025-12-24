@@ -2,6 +2,9 @@
   "name": "GOLD Additions",
   "description": "Quality of life implementations into UCSB's course registration system GOLD",
   "version": "1.2.0",
+  "permissions": [
+    "storage"
+  ],
   "action": {
     "default_popup": "html/popup.html",
     "default_icon": "icons/icon128.png"

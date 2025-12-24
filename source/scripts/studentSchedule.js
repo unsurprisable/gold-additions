@@ -49,6 +49,12 @@ function html(strings, ...values) {
     setTimeout(() => backdrop.classList.add('menu-hidden'), SETTINGS_ANIMATION_TIME);
   }
 
+  const DEFAULT_SETTINGS = {
+    includeFinals: true,
+    shortenNames: true,
+    includeDescriptions: false,
+  };
+
   // user settings (assigned when download button is pressed)
   let INCLUDE_FINALS = null;
   let SHORT_COURSE_NAMES = null;
@@ -111,6 +117,38 @@ function html(strings, ...values) {
         descriptionToggleText.classList.toggle('checked', descriptionCheckbox.checked);
       });
 
+      function applySettings(settings) {
+        finalsCheckbox.checked = settings.includeFinals;
+        finalsToggleText.classList.toggle('checked', settings.includeFinals);
+        shortenCheckbox.checked = settings.shortenNames;
+        shortenToggleText.classList.toggle('checked', settings.shortenNames);
+        descriptionCheckbox.checked = settings.includeDescriptions;
+        descriptionToggleText.classList.toggle('checked', settings.includeDescriptions);
+      }
+
+      function saveIcsSettings() {
+        console.log('Saving ICS settings...');
+        // console.log(chrome?.storage?.local)
+        if (!chrome?.storage?.local) return;
+        console.log('ICS settings saved to local storage.');
+        chrome.storage.local.set({
+          icsSettings: {
+            includeFinals: INCLUDE_FINALS,
+            shortenNames: SHORT_COURSE_NAMES,
+            includeDescriptions: INCLUDE_DESCRIPTIONS,
+          },
+        });
+      }
+
+      if (chrome?.storage?.local) {
+        chrome.storage.local.get('icsSettings', (result) => {
+          const settings = { ...DEFAULT_SETTINGS, ...(result?.icsSettings || {}) };
+          applySettings(settings);
+        });
+      } else {
+        applySettings(DEFAULT_SETTINGS);
+      }
+
       const downloadButton = document.getElementById('ics-download');
       const cancelButton = document.getElementById('ics-cancel');
 
@@ -123,6 +161,7 @@ function html(strings, ...values) {
         getFormInput();
         const icsFileData = generateIcsData();
         downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
+        saveIcsSettings();
         hideCalendarContext();
       });
 
