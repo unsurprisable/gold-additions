@@ -160,3 +160,15 @@ input:checked+.slider:before {
   -ms-transform: translateX(20px);
   transform: translateX(20px);
 }
+
+.when-on {
+  display: none;
+}
+
+.toggle-text.checked .when-off {
+  display: none;
+}
+
+.toggle-text.checked .when-on {
+  display: inline;
+}

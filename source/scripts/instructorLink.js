@@ -11,18 +11,16 @@
     .filter(label => label.textContent === 'Instructor');
 
   instructorLabels.forEach(label => {
-    label.parentElement.childNodes.forEach(
-      node => {
-        if (!(node.nodeType === Node.ELEMENT_NODE && label.matches('label.visible-xs')))
-          convertNodeToRmpLink(node);
-      });
+    label.parentElement.childNodes.forEach(node => {
+      if (node !== label) convertNodeToRmpLink(node);
+    });
   });
 })();
 
 
 function profNameIsValid(profName) {
   const name = profName.toLowerCase().trim();
-  const INVALID_PROF_NAMES = [ 'cancel', 't.b.a', 't.b.a.', '', null ];
+  const INVALID_PROF_NAMES = ['cancel', 't.b.a', 't.b.a.', '', null];
   return !INVALID_PROF_NAMES.includes(name);
 }
 

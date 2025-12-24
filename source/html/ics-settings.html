@@ -15,25 +15,44 @@
     <input id="ics-end-date" type=date>
   </div>
   <div class="input-container">
+    <span>Include course finals?</span>
+    <div>
+      <label id="include-finals-checkbox" class="switch" style="margin-right: 10px">
+        <input type=checkbox checked>
+        <span class="slider"></span>
+      </label>
+      <span id="finals-toggle-text" class="toggle-text checked">
+        <span class="when-off">Classes only</span>
+        <span class="when-on">With finals</span>
+      </span>
+    </div>
+  </div>
+  <div class="input-container">
     <span>Shorten course names?</span>
     <div>
       <label id="shorten-course-checkbox" class="switch" style="margin-right: 10px">
+        <input type=checkbox checked>
+        <span class="slider"></span>
+      </label>
+      <span id="shorten-toggle-text" class="toggle-text checked">
+        <span class="when-off">"MATH 4A - LIN ALG W/APPS"</span>
+        <span class="when-on">"MATH 4A"</span>
+      </span>
+    </div>
+  </div>
+  <div class="input-container">
+    <span>Include course descriptions?</span>
+    <div>
+      <label id="include-description-checkbox" class="switch" style="margin-right: 10px">
         <input type=checkbox>
         <span class="slider"></span>
       </label>
-      "MATH 1A - LEARNING FRACTIONS 101"
+      <span id="description-toggle-text" class="toggle-text">
+        <span class="when-off">Courses only</span>
+        <span class="when-on">"Professor: DAI X Z"</span>
+      </span>
     </div>
   </div>
-  <!-- <div class="input-container">
-      <span>Include course finals? (WIP)</span>
-      <div>
-        <label id="include-finals-checkbox" class="switch" style="margin-right: 10px">
-          <input type=checkbox>
-          <span class="slider"></span>
-        </label>
-        Feature not available yet.
-      </div>
-    </div> -->
   <div id="ics-button-container">
     <a id="ics-download" role="button" class="aspNetDisabled gold-button"
       href="https://calendar.google.com/calendar/r/settings/export?pli=1" target="_blank"

@@ -5,7 +5,6 @@ function html(strings, ...values) {
   return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
 }
 
-// TODO: add option to include/exclude finals, descriptions, courses
 // TODO: button in Registration page to save quarter dates
 (() => {
   console.log('Student Schedule');
@@ -51,7 +50,9 @@ function html(strings, ...values) {
   }
 
   // user settings (assigned when download button is pressed)
+  let INCLUDE_FINALS = null;
   let SHORT_COURSE_NAMES = null;
+  let INCLUDE_DESCRIPTIONS = null;
   let QUARTER_START_YEAR = null;
   let QUARTER_START_MONTH = null;
   let QUARTER_START_DAY = null;
@@ -72,19 +73,14 @@ function html(strings, ...values) {
       link.href = chrome.runtime.getURL('css/ics-settings.css');
       document.head.appendChild(link);
 
-      const startDateInput = document.getElementById('ics-start-date');
-      const endDateInput = document.getElementById('ics-end-date');
-      const shortenCheckboxLabel = document.getElementById('shorten-course-checkbox');
-      const shortenCheckbox = shortenCheckboxLabel.querySelector('input[type="checkbox"]');
-      const downloadButton = document.getElementById('ics-download');
-      const cancelButton = document.getElementById('ics-cancel');
-
       backdrop.addEventListener('click', (event) => {
         if (event.target === backdrop) {
           hideCalendarContext();
         }
       });
 
+      const startDateInput = document.getElementById('ics-start-date');
+      const endDateInput = document.getElementById('ics-end-date');
       /** Enable download button only when both dates are filled */
       function checkDownloadButtonRequirements() {
         if (startDateInput.value.trim() !== '' && endDateInput.value.trim() !== '') {
@@ -97,11 +93,26 @@ function html(strings, ...values) {
       startDateInput.addEventListener('input', checkDownloadButtonRequirements);
       endDateInput.addEventListener('input', checkDownloadButtonRequirements);
 
-      shortenCheckboxLabel.addEventListener('change', () => {
-        shortenCheckboxLabel.nextSibling.textContent = shortenCheckbox.checked
-          ? ' "MATH 1A" '
-          : ' "MATH 1A - LEARNING FRACTIONS 101" ';
+      const finalsCheckbox = document.querySelector('#include-finals-checkbox input[type="checkbox"]');
+      const finalsToggleText = document.getElementById('finals-toggle-text');
+      finalsCheckbox.addEventListener('change', () => {
+        finalsToggleText.classList.toggle('checked', finalsCheckbox.checked);
       });
+
+      const shortenCheckbox = document.querySelector('#shorten-course-checkbox input[type="checkbox"]');
+      const shortenToggleText = document.getElementById('shorten-toggle-text');
+      shortenCheckbox.addEventListener('change', () => {
+        shortenToggleText.classList.toggle('checked', shortenCheckbox.checked);
+      });
+
+      const descriptionCheckbox = document.querySelector('#include-description-checkbox input[type="checkbox"]');
+      const descriptionToggleText = document.getElementById('description-toggle-text');
+      descriptionCheckbox.addEventListener('change', () => {
+        descriptionToggleText.classList.toggle('checked', descriptionCheckbox.checked);
+      });
+
+      const downloadButton = document.getElementById('ics-download');
+      const cancelButton = document.getElementById('ics-cancel');
 
       downloadButton.addEventListener('click', (event) => {
         if (downloadButton.classList.contains('aspNetDisabled')) {
@@ -128,7 +139,9 @@ function html(strings, ...values) {
       });
 
       function getFormInput() {
+        INCLUDE_FINALS = finalsCheckbox.checked;
         SHORT_COURSE_NAMES = shortenCheckbox.checked;
+        INCLUDE_DESCRIPTIONS = descriptionCheckbox.checked;
         let [yyyy, mm, dd] = startDateInput.value.split('-');
         QUARTER_START_YEAR = yyyy;
         QUARTER_START_MONTH = mm;
@@ -139,9 +152,7 @@ function html(strings, ...values) {
         QUARTER_END_DAY = dd;
       }
 
-      /**
-       * @returns {string}
-       */
+      /** @returns {string} */
       function generateIcsData() {
         const meetings = scrapeCourses();
         const icsFileData = Meeting.toIcsCalendar(meetings);
@@ -156,9 +167,7 @@ function html(strings, ...values) {
   })();
 
   // ===== Data Processing =====
-  /**
-   * @returns {Meeting[]}
-   */
+  /** @returns {Meeting[]} */
   function scrapeCourses() {
     const meetings = [];
 
@@ -211,23 +220,25 @@ function html(strings, ...values) {
 
     });
 
-    // ===== Lectures and Sections =====
+    // ===== Final Exams =====
 
-    // last line is a note (weird design)
-    const finalExamSection = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
-    /**
-     * hiearchy starting from examItem:
-     * 
-     * > .children[0] - {course name}       
-     * > .children[1] - {exam date & time}
-     */
-    finalExamSection.forEach((examItem) => {
-      const name = examItem.children[0].textContent.trim().replace(/\s+/g, ' ');
-      const datetime = examItem.children[1].textContent.trim();
-      if (FinalExam.DATETIME_REGEX.test(datetime)) {
-        meetings.push(new FinalExam(name, datetime));
-      }
-    });
+    if (INCLUDE_FINALS) {
+      // last line is a note (weird design)
+      const finalExamSection = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
+      /**
+       * hiearchy starting from examItem:
+       * 
+       * > .children[0] - {course name}       
+       * > .children[1] - {exam date & time}
+       */
+      finalExamSection.forEach((examItem) => {
+        const name = examItem.children[0].textContent.trim().replace(/\s+/g, ' ');
+        const datetime = examItem.children[1].textContent.trim();
+        if (FinalExam.DATETIME_REGEX.test(datetime)) {
+          meetings.push(new FinalExam(name, datetime));
+        }
+      });
+    }
 
     return meetings;
   }
@@ -263,9 +274,8 @@ function html(strings, ...values) {
 
     /**
      * Convert a Date to ICS datetime (UTC) without separators.
-     * Example: Date(2025-01-25T10:25:30.000Z) -> 20250125T102530
-     * @param {Date} date
-     * @returns {string}
+     * @param {Date} date Date(2025-01-25T10:25:30.000Z)
+     * @returns {string} 20250125T102530
      */
     static dateToIcsString(date) {
       const iso = date.toISOString();
@@ -349,9 +359,7 @@ function html(strings, ...values) {
     }
   }
 
-  /**
-   * Represents a recurring course meeting (lecture/section)
-   */
+  /** Represents a recurring course meeting (lecture/section) */
   class CourseClass extends Meeting {
 
     /**
@@ -378,12 +386,8 @@ function html(strings, ...values) {
       this.units = units;
     }
 
-    /**
-     * @returns {MeetingIcsData}
-     */
+    /** @returns {MeetingIcsData} */
     getMeetingIcsData() {
-      // Use static maps defined on CourseClass
-
       const [startTime, endTime] = this.time.split('-').map(t => Meeting.to24Hour(t.trim()));
       const days = this.days.split(' ');
       const startDatetime = new Date(Date.UTC(
@@ -414,14 +418,11 @@ function html(strings, ...values) {
         days: days.map((d) => Meeting.DAY_MAP[d]).join(','),
         untilDate: `${Meeting.dateToIcsString(untilUtc)}Z`,
         location: this.location,
-        description: `Professor: ${this.professor.split('\n').join(', ')}\\nGrading: ${this.grading === 'L' ? 'Letter' : 'Pass/No Pass'}\\nUnits: ${this.units}`,
-
+        description: INCLUDE_DESCRIPTIONS ? `Professor: ${this.professor.split('\n').join(', ')}` : '',
       };
     }
 
-    /**
-     * @returns {string}
-     */
+    /** @returns {string} */
     toIcsEvent() {
       const data = this.getMeetingIcsData();
       const uid = Meeting.generateUid();
@@ -456,9 +457,7 @@ function html(strings, ...values) {
       this.datetime = datetime;
     }
 
-    /**
-     * @returns {MeetingIcsData}
-     */
+    /** @returns {MeetingIcsData} */
     getMeetingIcsData() {
       // Parse: "Thursday, March 19, 2026 12:00 PM - 3:00 PM"
       const monthMap = {
@@ -501,9 +500,7 @@ function html(strings, ...values) {
       };
     }
 
-    /**
-     * @returns {string}
-     */
+    /** @returns {string} */
     toIcsEvent() {
       const data = this.getMeetingIcsData();
       const uid = Meeting.generateUid();
@@ -524,8 +521,8 @@ function html(strings, ...values) {
 
   // ===== Utility =====
   /**
-   * @param {string} filename 
-   * @param {string} content 
+   * @param {string} filename
+   * @param {string} content
    */
   function downloadCalendar(filename, content) {
     const blob = new Blob([content], { type: 'text/calendar' });
