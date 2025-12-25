@@ -185,9 +185,7 @@ function html(strings, ...values) {
       /** Save the current ICS settings to Chrome storage. */
       function saveIcsSettings() {
         console.log('Saving ICS settings...');
-        // console.log(chrome?.storage?.local)
         if (!chrome?.storage?.local) return;
-        console.log('ICS settings saved to local storage.');
         chrome.storage.local.set({
           icsSettings: {
             includeFinals: INCLUDE_FINALS,
