@@ -2,7 +2,10 @@
 
 /* global chrome */
 
-// Function to save quarter's start and end dates to Chrome storage
+/** 
+ * Function to save quarter's start and end dates to Chrome storage
+ * @param {{quarterId: string, quarterName: string, startDate: string, endDate: string}} quarterInfo 
+ */
 function saveDates(quarterInfo) {
   const { quarterId, quarterName, startDate, endDate } = quarterInfo;
 
@@ -24,13 +27,18 @@ function saveDates(quarterInfo) {
   });
 }
 
-// Format date from MM/DD/YYYY to YYYY-MM-DD using day.js
+
+/** 
+ * @param {string} dateString MM/DD/YYYY 
+ * @returns {string} YYYY-MM-DD 
+ */
 function formatDate(dateString) {
   const [month, day, year] = dateString.split('/').map(Number);
   return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
 }
 
-// Retrieves information about the current quarter, including its ID, text, start date, and end date.
+
+/** @returns {{quarterId: string, quarterName: string, startDate: string, endDate: string}} */
 function getQuarterInfo() {
   const startDate = formatDate(
     document.querySelector('#pageContent_FirstDayInstructionLabel').textContent.trim());
@@ -57,7 +65,6 @@ button.style.fontSize = '13px';
 button.style.padding = '5px 10px';
 document.querySelector('#pageContent_FirstDayInstructionLabel').insertAdjacentElement('afterend', button);
 
-// Add event listener to trigger saveDates function when the button is clicked
 button.addEventListener('click', function (event) {
   event.preventDefault(); // Prevent the default form submission
   saveDates(getQuarterInfo());

@@ -21,12 +21,22 @@
 })();
 
 
+/**
+ * Check if a professor name is valid for RateMyProfessors.
+ * @param {string} profName
+ * @returns {boolean}
+ */
 function profNameIsValid(profName) {
   const name = profName.toLowerCase().trim();
   const INVALID_PROF_NAMES = ['cancel', 't.b.a', 't.b.a.', '', null];
   return !INVALID_PROF_NAMES.includes(name);
 }
 
+/**
+ * Create a RateMyProfessors link for a professor name.
+ * @param {string} profName
+ * @returns {HTMLAnchorElement}
+ */
 function createRmpLink(profName) {
   const ratemyprofURL = SEARCH_URL + encodeURIComponent(profName);
 
@@ -40,6 +50,10 @@ function createRmpLink(profName) {
   return link;
 }
 
+/**
+ * Convert a DOM node containing a professor name to a RateMyProfessors link if valid.
+ * @param {Node} node
+ */
 function convertNodeToRmpLink(node) {
   const profName = node?.textContent?.trim();
   if (profName && profNameIsValid(profName)) {

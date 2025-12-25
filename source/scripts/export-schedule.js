@@ -1,6 +1,11 @@
 /* global chrome */
 
 // for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
+/**
+ * @param {TemplateStringsArray} strings
+ * @param {...any} values
+ * @returns {string}
+ */
 function html(strings, ...values) {
   return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
 }
@@ -124,9 +129,14 @@ function html(strings, ...values) {
       });
 
       // Update date inputs based on selected quarter
+      /**
+       * @param {string} quarterId
+       */
       function setDateInputsForQuarter(quarterId) {
         const q = QUARTERS_CACHE[quarterId];
-        if (q && typeof q.start === 'string' && typeof q.end === 'string') {
+        if (q &&
+          typeof q.start === 'string' && q.start.match(/^\d{4}-\d{2}-\d{2}$/) &&
+          typeof q.end === 'string' && q.end.match(/^\d{4}-\d{2}-\d{2}$/)) {
           if (startDateInput.value !== q.start) startDateInput.value = q.start;
           if (endDateInput.value !== q.end) endDateInput.value = q.end;
           if (quarterWarning) quarterWarning.style.display = 'none';
@@ -160,6 +170,9 @@ function html(strings, ...values) {
         });
       }
 
+      /**
+       * @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean}} settings
+       */
       function applySettings(settings) {
         finalsCheckbox.checked = settings.includeFinals;
         finalsToggleText.classList.toggle('checked', settings.includeFinals);
@@ -169,6 +182,7 @@ function html(strings, ...values) {
         descriptionToggleText.classList.toggle('checked', settings.includeDescriptions);
       }
 
+      /** Save the current ICS settings to Chrome storage. */
       function saveIcsSettings() {
         console.log('Saving ICS settings...');
         // console.log(chrome?.storage?.local)
@@ -220,6 +234,7 @@ function html(strings, ...values) {
         hideCalendarContext();
       });
 
+      /** Read form input fields and update global settings variables. */
       function getFormInput() {
         INCLUDE_FINALS = finalsCheckbox.checked;
         SHORT_COURSE_NAMES = shortenCheckbox.checked;
@@ -249,7 +264,10 @@ function html(strings, ...values) {
   })();
 
   // ===== Data Processing =====
-  /** @returns {Meeting[]} */
+  /**
+   * Scrape the schedule page for all course and final exam meeting data.
+   * @returns {Meeting[]}
+   */
   function scrapeCourses() {
     const meetings = [];
 
@@ -259,7 +277,7 @@ function html(strings, ...values) {
 
     /*
      * FOR FUTURE REFERENCE:
-     * Hiearchy starting from scheduleItem:
+     * Hierarchy starting from scheduleItem:
      * 
      * > .children[0] - {course name}                                |
      * > .children[1] - all course information                       |
@@ -338,6 +356,7 @@ function html(strings, ...values) {
 
   /**
    * Abstract base class for calendar events
+   * Provides ICS generation utilities and interface for subclasses
    */
   class Meeting {
     static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
@@ -443,7 +462,6 @@ function html(strings, ...values) {
 
   /** Represents a recurring course meeting (lecture/section) */
   class CourseClass extends Meeting {
-
     /**
      * Used to store and modify course data in its raw HTML form.
      * 
@@ -524,9 +542,7 @@ function html(strings, ...values) {
     }
   }
 
-  /**
-   * Represents a final exam (single non-recurring event)
-   */
+  /** Represents a final exam (single non-recurring event) */
   class FinalExam extends Meeting {
     static DATETIME_REGEX = /^\w+,\s+(\w+)\s+(\d+),\s+(\d{4})\s+(.+)$/;
     /**
@@ -602,6 +618,10 @@ function html(strings, ...values) {
   }
 
   // ===== Utility =====
+  /**
+   * @param {string} filename
+   * @param {string} content
+   */
   /**
    * @param {string} filename
    * @param {string} content

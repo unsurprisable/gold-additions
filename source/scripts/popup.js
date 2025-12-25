@@ -1,5 +1,9 @@
 /* global chrome, SEARCH_URL */
 
+/**
+ * Open RateMyProfessors search for the given professor name.
+ * @param {string} inputProfName
+ */
 function handleSearch(inputProfName) {
   const url = SEARCH_URL + encodeURIComponent(inputProfName.trim());
   window.open(url, '_blank');
