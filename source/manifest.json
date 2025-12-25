@@ -1,9 +1,12 @@
 {
   "name": "GOLD Additions",
   "description": "Quality of life implementations into UCSB's course registration system GOLD",
-  "version": "1.2.0",
+  "version": "1.3.0",
+  "permissions": [
+    "storage"
+  ],
   "action": {
-    "default_popup": "popup/search.html",
+    "default_popup": "html/popup.html",
     "default_icon": "icons/icon128.png"
   },
   "icons": {
@@ -12,12 +15,42 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://my.sa.ucsb.edu/gold/ResultsFindCourses.aspx"],
-      "js": ["scripts/utils.js", "scripts/cs_FindCourses.js"]
+      "matches": [
+        "https://my.sa.ucsb.edu/gold/ResultsFindCourses.aspx"
+      ],
+      "js": [
+        "scripts/utils.js",
+        "scripts/instructor-link.js"
+      ]
     },
     {
-      "matches": ["https://my.sa.ucsb.edu/gold/StudentSchedule.aspx"],
-      "js": ["scripts/utils.js", "scripts/cs_StudentSchedule.js"]
+      "matches": [
+        "https://my.sa.ucsb.edu/gold/StudentSchedule.aspx"
+      ],
+      "js": [
+        "scripts/utils.js",
+        "scripts/export-schedule.js",
+        "scripts/instructor-link.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx"
+      ],
+      "js": [
+        "scripts/save-quarter-info.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "html/ics-settings.html",
+        "css/ics-settings.css"
+      ],
+      "matches": [
+        "https://my.sa.ucsb.edu/*"
+      ]
     }
   ],
   "manifest_version": 3

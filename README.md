@@ -14,7 +14,7 @@ GOLD Additions is a fun little side-project of mine that's meant to simplify som
 
 Current features:
 * Click a professor's name to instantly open a RateMyProfessor search
-* Instantly export course schedule to a digital calendar (Outlook, Google, Apple, etc.)
+* Instantly export course schedule and final exams to a digital calendar (Outlook, Google, Apple, etc.)
 * Lightweight: only runs on GOLD pages
 
 I'm completely open to feature suggestions and will probably update the extension whenever I think of one!
@@ -37,6 +37,6 @@ The program uses content scripts to read and write to the DOM. All functionality
 
 The RateMyProfessor implementation was quite simple. The program algorithmically locates all of the HTML elements that display a professor's name and simply replaces them with RateMyProfessor links instead.
 
-The calendar implementation was quite a bit more complicated. If you check **source/scripts/cs_StudentSchedule** you can see that the file is quite large compared to the other content script... that's because it contains all of the JavaScript, HTML, and CSS related to generating and injecting the Schedule Exporter into the website. Could I have separated all of the HTML and CSS into their own file? honestly yeah probably but whatever 🤷‍♂️
+The calendar implementation was quite a bit more complicated. Basically, it injects a buttons into the Student Schedule webpage, and on click scrapes the webpage for course data like location and time, then organizes them into .ics format and outputs a file.
 
 (i'll probably put more here whenever i add a new feature)
