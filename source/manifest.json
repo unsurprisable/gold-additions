@@ -20,7 +20,7 @@
       ],
       "js": [
         "scripts/utils.js",
-        "scripts/instructorLink.js"
+        "scripts/instructor-link.js"
       ]
     },
     {
@@ -29,8 +29,8 @@
       ],
       "js": [
         "scripts/utils.js",
-        "scripts/exportSchedule.js",
-        "scripts/instructorLink.js"
+        "scripts/export-schedule.js",
+        "scripts/instructor-link.js"
       ]
     },
     {
@@ -38,7 +38,7 @@
         "https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx"
       ],
       "js": [
-        "scripts/save_quarter_info.js"
+        "scripts/save-quarter-info.js"
       ]
     }
   ],
