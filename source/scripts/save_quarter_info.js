@@ -4,33 +4,22 @@
 
 // Function to save quarter's start and end dates to Chrome storage
 function saveDates(quarterInfo) {
-  const { quarterId, quarterText, startDate, endDate } = quarterInfo;
+  const { quarterId, quarterName, startDate, endDate } = quarterInfo;
 
-  chrome.storage.local.get(['quarters'], function (result) {
+  chrome.storage.local.get(['quarters'], (result) => {
     let quarters = result.quarters || {};
 
     // Update or add the quarter information
     quarters[quarterId] = {
-      quarterName: quarterText,
+      name: quarterName,
       start: startDate,
       end: endDate,
     };
 
     // save quarter info
-    chrome.storage.local.set({ quarters: quarters }, function () {
-      if (chrome.runtime.lastError) {
+    chrome.storage.local.set({ quarters: quarters }, () => {
+      if (chrome.runtime.lastError)
         console.error('Error saving quarter info:', chrome.runtime.lastError);
-      } else {
-        console.log('Quarter info saved successfully:', quarters);
-      }
-    });
-    // set currentQuarter to quarterId of saved quarter
-    chrome.storage.local.set({ currentQuarter: quarterId }, function () {
-      if (chrome.runtime.lastError) {
-        console.error('Error saving current quarter:', chrome.runtime.lastError);
-      } else {
-        console.log('Current quarter saved successfully:', quarters);
-      }
     });
   });
 }
@@ -44,34 +33,33 @@ function formatDate(dateString) {
 // Retrieves information about the current quarter, including its ID, text, start date, and end date.
 function getQuarterInfo() {
   const startDate = formatDate(
-    document.getElementById('pageContent_FirstDayInstructionLabel').textContent.trim());
+    document.querySelector('#pageContent_FirstDayInstructionLabel').textContent.trim());
   const endDate = formatDate(
-    document.getElementById('pageContent_LastDayInstructionLabel').textContent.trim());
+    document.querySelector('#pageContent_LastDayInstructionLabel').textContent.trim());
   const quarter = document.querySelector('#pageContent_quarterDropDown option[selected="selected"]');
-  console.log(quarter.getAttribute('value'));
   const quarterId = quarter.getAttribute('value').trim();
-  const quarterText = quarter.textContent.trim();
+  const quarterName = quarter.textContent.trim();
+  console.log(`Saved ${quarterId}: ${quarterName}`);
   return {
     quarterId: quarterId,
-    quarterText: quarterText,
+    quarterName: quarterName,
     startDate: startDate,
     endDate: endDate,
   };
-}
-
-function save() {
-  saveDates(getQuarterInfo());
 }
 
 // Create a submit button and append it to the body
 const button = document.createElement('input');
 button.type = 'submit';
 button.value = 'Save Quarter Info';
-document.getElementById('userLabel').insertAdjacentElement('afterend', button);
+button.style.marginLeft = '10px';
+button.style.fontSize = '13px';
+button.style.padding = '5px 10px';
+document.querySelector('#pageContent_FirstDayInstructionLabel').insertAdjacentElement('afterend', button);
 
 // Add event listener to trigger saveDates function when the button is clicked
 button.addEventListener('click', function (event) {
-  console.log('Save Quarter Info button added to the page.');
   event.preventDefault(); // Prevent the default form submission
-  save();
+  saveDates(getQuarterInfo());
+  button.blur(); // Remove focus to prevent darkened state
 });

@@ -32,6 +32,14 @@
         "scripts/exportSchedule.js",
         "scripts/instructorLink.js"
       ]
+    },
+    {
+      "matches": [
+        "https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx"
+      ],
+      "js": [
+        "scripts/save_quarter_info.js"
+      ]
     }
   ],
   "web_accessible_resources": [

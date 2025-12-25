@@ -5,15 +5,16 @@ function html(strings, ...values) {
   return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
 }
 
-// TODO: button in Registration page to save quarter dates
 (() => {
   console.log('Student Schedule');
 
-  // ===== Configuration =====
   const SETTINGS_ANIMATION_TIME = 300; // ms - not synced with ics-settings.css
 
-  // ===== DOM References =====
   const scheduleContainer = document.querySelector('#div_Schedule_Container');
+
+  const currentQuarterOption = document.querySelector('#ctl00_pageContent_quarterDropDown option[selected="selected"]');
+  const PAGE_QUARTER_ID = currentQuarterOption?.getAttribute('value')?.trim() || '';
+  const PAGE_QUARTER_NAME = currentQuarterOption?.textContent?.trim() || '';
 
   // ===== Export Button Setup =====
   const hrElement = scheduleContainer.querySelector('hr');
@@ -85,8 +86,13 @@ function html(strings, ...values) {
         }
       });
 
+      const quarterLabel = document.getElementById('ics-quarter-label');
+      const quarterWarning = document.getElementById('ics-quarter-warning');
+      let QUARTERS_CACHE = {};
+
       const startDateInput = document.getElementById('ics-start-date');
       const endDateInput = document.getElementById('ics-end-date');
+
       /** Enable download button only when both dates are filled */
       function checkDownloadButtonRequirements() {
         if (startDateInput.value.trim() !== '' && endDateInput.value.trim() !== '') {
@@ -116,6 +122,43 @@ function html(strings, ...values) {
       descriptionCheckbox.addEventListener('change', () => {
         descriptionToggleText.classList.toggle('checked', descriptionCheckbox.checked);
       });
+
+      // Update date inputs based on selected quarter
+      function setDateInputsForQuarter(quarterId) {
+        const q = QUARTERS_CACHE[quarterId];
+        if (q && typeof q.start === 'string' && typeof q.end === 'string') {
+          if (startDateInput.value !== q.start) startDateInput.value = q.start;
+          if (endDateInput.value !== q.end) endDateInput.value = q.end;
+          if (quarterWarning) quarterWarning.style.display = 'none';
+        } else {
+          if (startDateInput.value !== '') startDateInput.value = '';
+          if (endDateInput.value !== '') endDateInput.value = '';
+          if (quarterWarning) quarterWarning.style.display = '';
+        }
+        checkDownloadButtonRequirements();
+      }
+
+      // Build the quarter dropdown from storage, defaulting to current page selection
+      function refreshQuarterUI() {
+        if (quarterLabel) quarterLabel.textContent = PAGE_QUARTER_NAME;
+        chrome.storage.local.get(['quarters'], (result) => {
+          QUARTERS_CACHE = result.quarters || {};
+          setDateInputsForQuarter(PAGE_QUARTER_ID);
+        });
+      }
+
+      // Refresh quarter UI once on setup
+      refreshQuarterUI();
+
+      // Listen for storage changes from the Registration page and refresh when returning
+      if (chrome?.storage?.onChanged) {
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+          if (areaName !== 'local') return;
+          if (changes.quarters) {
+            refreshQuarterUI();
+          }
+        });
+      }
 
       function applySettings(settings) {
         finalsCheckbox.checked = settings.includeFinals;
