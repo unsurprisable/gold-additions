@@ -34,7 +34,7 @@
   flex-direction: column;
   align-items: flex-start;
   overflow: visible;
-  row-gap: 32px;
+  row-gap: 16px;
   background: linear-gradient(110deg, #fff, #fff, #edf3fe);
   padding: 20px 40px;
   border-radius: 10px;
@@ -147,6 +147,12 @@
   transition: .1s ease;
 }
 
+input[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
 input:checked+.slider {
   background-color: var(--button-color);
 }
@@ -159,6 +165,10 @@ input:checked+.slider:before {
   -webkit-transform: translateX(20px);
   -ms-transform: translateX(20px);
   transform: translateX(20px);
+}
+
+.toggle-text u {
+  color: #4d4e4e;
 }
 
 .when-on {
