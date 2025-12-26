@@ -97,6 +97,8 @@ function html(strings, ...values) {
 
       const startDateInput = document.getElementById('ics-start-date');
       const endDateInput = document.getElementById('ics-end-date');
+      const dateAutofillReminder = document.getElementById('ics-autofill-reminder');
+      const dateAutofillQuarter = document.getElementById('ics-autofill-quarter');
 
       /** Enable download button only when both dates are filled */
       function checkDownloadButtonRequirements() {
@@ -134,16 +136,28 @@ function html(strings, ...values) {
        */
       function setDateInputsForQuarter(quarterId) {
         const q = QUARTERS_CACHE[quarterId];
-        if (q &&
+        if (q && 
           typeof q.start === 'string' && q.start.match(/^\d{4}-\d{2}-\d{2}$/) &&
-          typeof q.end === 'string' && q.end.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          typeof q.end === 'string' && q.end.match(/^\d{4}-\d{2}-\d{2}$/)
+        ) {
           if (startDateInput.value !== q.start) startDateInput.value = q.start;
           if (endDateInput.value !== q.end) endDateInput.value = q.end;
           if (quarterWarning) quarterWarning.style.display = 'none';
+          startDateInput.disabled = true;
+          startDateInput.ariaDisabled = true;
+          endDateInput.disabled = true;
+          endDateInput.ariaDisabled = true;
+          dateAutofillQuarter.textContent = PAGE_QUARTER_NAME;
+          dateAutofillReminder.style.display = '';
         } else {
           if (startDateInput.value !== '') startDateInput.value = '';
           if (endDateInput.value !== '') endDateInput.value = '';
           if (quarterWarning) quarterWarning.style.display = '';
+          startDateInput.disabled = false;
+          startDateInput.ariaDisabled = false;
+          endDateInput.disabled = false;
+          endDateInput.ariaDisabled = false;
+          dateAutofillReminder.style.display = 'none';
         }
         checkDownloadButtonRequirements();
       }
@@ -516,7 +530,7 @@ function html(strings, ...values) {
         days: days.map((d) => Meeting.DAY_MAP[d]).join(','),
         untilDate: `${Meeting.dateToIcsString(untilUtc)}Z`,
         location: this.location,
-        description: INCLUDE_DESCRIPTIONS ? `Professor: ${this.professor.split('\n').join(', ')}` : '',
+        description: INCLUDE_DESCRIPTIONS ? `Instructor: ${this.professor.split('\n').join(', ')}` : '',
       };
     }
 
