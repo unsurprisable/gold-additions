@@ -177,6 +177,7 @@ function html(strings, ...values) {
       }
 
       const downloadButton = document.getElementById('ics-download');
+      const resetButton = document.getElementById('ics-reset');
       const cancelButton = document.getElementById('ics-cancel');
 
       downloadButton.addEventListener('click', () => {
@@ -186,6 +187,12 @@ function html(strings, ...values) {
         downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
         saveIcsSettings();
         hideCalendarContext();
+      });
+
+      resetButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        console.log('Resetting to default settings...');
+        applySettings(DEFAULT_SETTINGS);
       });
 
       cancelButton.addEventListener('click', (event) => {
