@@ -1,4 +1,4 @@
-/* global chrome, Meeting */
+/* global chrome, CalendarEvent */
 
 // for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
 /**
@@ -202,8 +202,8 @@ function html(strings, ...values) {
 
       /** @returns {string} */
       function generateIcsData() {
-        const meetings = scrapeCourses();
-        const icsFileData = Meeting.toIcsCalendar(meetings);
+        const events = scrapeCourses();
+        const icsFileData = CalendarEvent.toIcsCalendar(events);
         console.groupCollapsed('ICS File Data');
         console.log(icsFileData);
         console.groupEnd();
@@ -216,11 +216,11 @@ function html(strings, ...values) {
 
   // ===== Data Processing =====
   /**
-   * Scrape the schedule page for all course and final exam meeting data.
-   * @returns {Meeting[]}
+  * Scrape the schedule page for all course and final exam event data.
+  * @returns {CalendarEvent[]}
    */
   function scrapeCourses() {
-    const meetings = [];
+    const events = [];
 
     // ===== Lectures and Sections =====
 
@@ -266,7 +266,7 @@ function html(strings, ...values) {
         const grading = courseInfo.children[1].textContent.trim().substring(9); // remove 'Grading: ' prefix
         const units = courseInfo.children[2].textContent.trim().substring(0, 3); // remove ' Units' suffix
 
-        meetings.push(new CourseClass(name, professor, days, time, location, courseID, grading, units));
+        events.push(new CourseClass(name, professor, days, time, location, courseID, grading, units));
       }
 
     });
@@ -286,27 +286,16 @@ function html(strings, ...values) {
         const name = examItem.children[0].textContent.trim().replace(/\s+/g, ' ');
         const datetime = examItem.children[1].textContent.trim();
         if (FinalExam.DATETIME_REGEX.test(datetime)) {
-          meetings.push(new FinalExam(name, datetime));
+          events.push(new FinalExam(name, datetime));
         }
       });
     }
 
-    return meetings;
+    return events;
   }
 
-  /**
-   * @typedef {Object} MeetingIcsData
-   * @property {string} summary
-   * @property {string} dtStart
-   * @property {string} dtEnd
-   * @property {string} days
-   * @property {string} untilDate
-   * @property {string} location
-   * @property {string} description
-   */
-
-  /** Represents a recurring course meeting (lecture/section) */
-  class CourseClass extends Meeting {
+  /** Represents a recurring course event (lecture/section) */
+  class CourseClass extends CalendarEvent {
     /**
      * Used to store and modify course data in its raw HTML form.
      * 
@@ -331,9 +320,9 @@ function html(strings, ...values) {
       this.units = units;
     }
 
-    /** @returns {MeetingIcsData} */
-    getMeetingIcsData() {
-      const [startTime, endTime] = this.time.split('-').map(t => Meeting.to24Hour(t.trim()));
+    /** @returns {EventIcsData} */
+    getEventIcsData() {
+      const [startTime, endTime] = this.time.split('-').map(t => CalendarEvent.to24Hour(t.trim()));
       const days = this.days.split(' ');
       const startDatetime = new Date(Date.UTC(
         QUARTER_START_YEAR,
@@ -342,7 +331,7 @@ function html(strings, ...values) {
         startTime.hours,
         startTime.minutes,
       ));
-      startDatetime.setUTCDate(startDatetime.getUTCDate() + Meeting.DAY_OFFSET[days[0]]);
+      startDatetime.setUTCDate(startDatetime.getUTCDate() + CalendarEvent.DAY_OFFSET[days[0]]);
 
       const endDatetime = new Date(startDatetime);
       endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
@@ -358,10 +347,10 @@ function html(strings, ...values) {
 
       return {
         summary,
-        dtStart: Meeting.dateToIcs(startDatetime),
-        dtEnd: Meeting.dateToIcs(endDatetime),
-        days: days.map((d) => Meeting.DAY_MAP[d]).join(','),
-        untilDate: `${Meeting.dateToIcs(untilUtc)}Z`,
+        dtStart: CalendarEvent.dateToIcs(startDatetime),
+        dtEnd: CalendarEvent.dateToIcs(endDatetime),
+        days: days.map((d) => CalendarEvent.DAY_MAP[d]).join(','),
+        untilDate: `${CalendarEvent.dateToIcs(untilUtc)}Z`,
         location: this.location,
         description: INCLUDE_DESCRIPTIONS ? `Instructor: ${this.professor.split('\n').join(', ')}` : '',
       };
@@ -369,26 +358,26 @@ function html(strings, ...values) {
 
     /** @returns {string} */
     toIcsEvent() {
-      const data = this.getMeetingIcsData();
-      const uid = Meeting.generateUid();
-      const dtStamp = `${Meeting.dateToIcs(new Date())}Z`;
+      const data = this.getEventIcsData();
+      const uid = CalendarEvent.generateUid();
+      const dtStamp = `${CalendarEvent.dateToIcs(new Date())}Z`;
       return [
         'BEGIN:VEVENT',
         `UID:${uid}`,
         `DTSTAMP:${dtStamp}`,
-        `SUMMARY:${Meeting.escapeText(data.summary)}`,
+        `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
         `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
         `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
         `RRULE:FREQ=WEEKLY;BYDAY=${data.days};UNTIL=${data.untilDate}`,
-        `LOCATION:${Meeting.escapeText(data.location)}`,
-        `DESCRIPTION:${Meeting.escapeText(data.description)}`,
+        `LOCATION:${CalendarEvent.escapeText(data.location)}`,
+        `DESCRIPTION:${CalendarEvent.escapeText(data.description)}`,
         'END:VEVENT'
       ].join('\n');
     }
   }
 
   /** Represents a final exam (single non-recurring event) */
-  class FinalExam extends Meeting {
+  class FinalExam extends CalendarEvent {
     static DATETIME_REGEX = /^\w+,\s+(\w+)\s+(\d+),\s+(\d{4})\s+(.+)$/;
     /**
      * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
@@ -400,8 +389,8 @@ function html(strings, ...values) {
       this.datetime = datetime;
     }
 
-    /** @returns {MeetingIcsData} */
-    getMeetingIcsData() {
+    /** @returns {EventIcsData} */
+    getEventIcsData() {
       // Parse: "Thursday, March 19, 2026 12:00 PM - 3:00 PM"
       const monthMap = {
         January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
@@ -416,8 +405,8 @@ function html(strings, ...values) {
       const [, monthName, day, year, timeRange] = match;
       const [startTimeStr, endTimeStr] = timeRange.split('-').map(t => t.trim());
 
-      const startTime = Meeting.to24Hour(startTimeStr);
-      const endTime = Meeting.to24Hour(endTimeStr);
+      const startTime = CalendarEvent.to24Hour(startTimeStr);
+      const endTime = CalendarEvent.to24Hour(endTimeStr);
 
       const startDatetime = new Date(Date.UTC(
         Number(year),
@@ -434,8 +423,8 @@ function html(strings, ...values) {
 
       return {
         summary,
-        dtStart: Meeting.dateToIcs(startDatetime),
-        dtEnd: Meeting.dateToIcs(endDatetime),
+        dtStart: CalendarEvent.dateToIcs(startDatetime),
+        dtEnd: CalendarEvent.dateToIcs(endDatetime),
         days: '', // Not used for single events
         untilDate: '', // Not used for single events
         location: '',
@@ -445,18 +434,18 @@ function html(strings, ...values) {
 
     /** @returns {string} */
     toIcsEvent() {
-      const data = this.getMeetingIcsData();
-      const uid = Meeting.generateUid();
-      const dtStamp = `${Meeting.dateToIcs(new Date())}Z`;
+      const data = this.getEventIcsData();
+      const uid = CalendarEvent.generateUid();
+      const dtStamp = `${CalendarEvent.dateToIcs(new Date())}Z`;
       return [
         'BEGIN:VEVENT',
         `UID:${uid}`,
         `DTSTAMP:${dtStamp}`,
-        `SUMMARY:${Meeting.escapeText(data.summary)}`,
+        `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
         `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
         `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
-        `LOCATION:${Meeting.escapeText(data.location)}`,
-        `DESCRIPTION:${Meeting.escapeText(data.description)}`,
+        `LOCATION:${CalendarEvent.escapeText(data.location)}`,
+        `DESCRIPTION:${CalendarEvent.escapeText(data.description)}`,
         'END:VEVENT'
       ].join('\n');
     }

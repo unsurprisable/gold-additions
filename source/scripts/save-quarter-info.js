@@ -1,6 +1,6 @@
 /* Copied from xziyu6/export-ucsb-gold (MIT License) */
 
-/* global chrome, Meeting */
+/* global chrome, CalendarEvent */
 
 /** 
  * Save quarter information to Chrome storage

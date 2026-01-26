@@ -1,11 +1,22 @@
-/* exported SEARCH_URL, Meeting */
+/* exported SEARCH_URL, CalendarEvent */
 
 const SEARCH_URL = 'https://www.ratemyprofessors.com/search/professors/1077?q=';
 
 /**
+* @typedef {Object} EventIcsData
+ * @property {string} summary
+ * @property {string} dtStart
+ * @property {string} dtEnd
+ * @property {string} days
+ * @property {string} untilDate
+ * @property {string} location
+ * @property {string} description
+ */
+
+/**
  * Abstract base class for calendar events, povides ICS generation utilities and interface for subclasses
  */
-class Meeting {
+class CalendarEvent {
   static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
   static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
   /**
@@ -56,10 +67,10 @@ class Meeting {
 
   /**
    * Must be implemented by subclasses
-   * @returns {MeetingIcsData}
+  * @returns {EventIcsData}
    */
-  getMeetingIcsData() {
-    throw new Error('getMeetingIcsData must be implemented by subclass');
+  getEventIcsData() {
+    throw new Error('getEventIcsData must be implemented by subclass');
   }
 
   /**
@@ -71,7 +82,7 @@ class Meeting {
   }
 
   /**
-   * @param {Meeting[]} events
+  * @param {CalendarEvent[]} events
    * @returns {string}
    */
   static toIcsCalendar(events) {
