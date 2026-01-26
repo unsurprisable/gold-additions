@@ -40,10 +40,8 @@ function html(strings, ...values) {
   });
 
   // ===== Backdrop & Modal Helpers =====
-  const backdrop = document.createElement('div');
-  backdrop.id = 'ics-settings-backdrop';
-  backdrop.className = 'menu-hidden';
-  document.body.appendChild(backdrop);
+  document.body.insertAdjacentHTML('beforeend', '<div id="ics-settings-backdrop" class="menu-hidden"></div>');
+  const backdrop = document.getElementById('ics-settings-backdrop');
 
   function showCalendarContext() {
     backdrop.classList.remove('menu-hidden');
@@ -80,10 +78,8 @@ function html(strings, ...values) {
       const modalHtml = await response.text();
       backdrop.insertAdjacentHTML('beforeend', modalHtml);
 
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = chrome.runtime.getURL('css/ics-settings.css');
-      document.head.appendChild(link);
+      const cssLink = document.getElementById('ics-settings-css');
+      cssLink.href = chrome.runtime.getURL('css/ics-settings.css');
 
       backdrop.addEventListener('click', (event) => {
         if (event.target === backdrop) {
@@ -94,23 +90,6 @@ function html(strings, ...values) {
       const quarterLabel = document.getElementById('ics-quarter-label');
       const quarterWarning = document.getElementById('ics-quarter-warning');
       let QUARTERS_CACHE = {};
-
-      const startDateInput = document.getElementById('ics-start-date');
-      const endDateInput = document.getElementById('ics-end-date');
-      const dateAutofillReminder = document.getElementById('ics-autofill-reminder');
-      const dateAutofillQuarter = document.getElementById('ics-autofill-quarter');
-
-      /** Enable download button only when both dates are filled */
-      function checkDownloadButtonRequirements() {
-        if (startDateInput.value.trim() !== '' && endDateInput.value.trim() !== '') {
-          downloadButton.classList.remove('aspNetDisabled');
-        } else {
-          downloadButton.classList.add('aspNetDisabled');
-        }
-      }
-
-      startDateInput.addEventListener('input', checkDownloadButtonRequirements);
-      endDateInput.addEventListener('input', checkDownloadButtonRequirements);
 
       const finalsCheckbox = document.querySelector('#include-finals-checkbox input[type="checkbox"]');
       const finalsToggleText = document.getElementById('finals-toggle-text');
@@ -130,44 +109,23 @@ function html(strings, ...values) {
         descriptionToggleText.classList.toggle('checked', descriptionCheckbox.checked);
       });
 
-      // Update date inputs based on selected quarter
-      /**
-       * @param {string} quarterId
-       */
-      function setDateInputsForQuarter(quarterId) {
-        const q = QUARTERS_CACHE[quarterId];
-        if (q && 
-          typeof q.start === 'string' && q.start.match(/^\d{4}-\d{2}-\d{2}$/) &&
-          typeof q.end === 'string' && q.end.match(/^\d{4}-\d{2}-\d{2}$/)
-        ) {
-          if (startDateInput.value !== q.start) startDateInput.value = q.start;
-          if (endDateInput.value !== q.end) endDateInput.value = q.end;
-          if (quarterWarning) quarterWarning.style.display = 'none';
-          startDateInput.disabled = true;
-          startDateInput.ariaDisabled = true;
-          endDateInput.disabled = true;
-          endDateInput.ariaDisabled = true;
-          dateAutofillQuarter.textContent = PAGE_QUARTER_NAME;
-          dateAutofillReminder.style.display = '';
-        } else {
-          if (startDateInput.value !== '') startDateInput.value = '';
-          if (endDateInput.value !== '') endDateInput.value = '';
-          if (quarterWarning) quarterWarning.style.display = '';
-          startDateInput.disabled = false;
-          startDateInput.ariaDisabled = false;
-          endDateInput.disabled = false;
-          endDateInput.ariaDisabled = false;
-          dateAutofillReminder.style.display = 'none';
-        }
-        checkDownloadButtonRequirements();
-      }
-
       // Build the quarter dropdown from storage, defaulting to current page selection
       function refreshQuarterUI() {
         if (quarterLabel) quarterLabel.textContent = PAGE_QUARTER_NAME;
         chrome.storage.local.get(['quarters'], (result) => {
           QUARTERS_CACHE = result.quarters || {};
-          setDateInputsForQuarter(PAGE_QUARTER_ID);
+
+          // Update warning visibility and global dates based on saved dates
+          const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
+          if (q && q.start && q.end) {
+            [QUARTER_START_YEAR, QUARTER_START_MONTH, QUARTER_START_DAY] = q.start.split('-').map(Number);
+            [QUARTER_END_YEAR, QUARTER_END_MONTH, QUARTER_END_DAY] = q.end.split('-').map(Number);
+
+            quarterWarning.style.display = 'none';
+          } else {
+            quarterWarning.style.display = '';
+          }
+
         });
       }
 
@@ -221,11 +179,7 @@ function html(strings, ...values) {
       const downloadButton = document.getElementById('ics-download');
       const cancelButton = document.getElementById('ics-cancel');
 
-      downloadButton.addEventListener('click', (event) => {
-        if (downloadButton.classList.contains('aspNetDisabled')) {
-          event.preventDefault();
-          return; // prob not the best way to do this but wtv
-        }
+      downloadButton.addEventListener('click', () => {
         console.log('Generating ICS file data...');
         getFormInput();
         const icsFileData = generateIcsData();
@@ -235,30 +189,15 @@ function html(strings, ...values) {
       });
 
       cancelButton.addEventListener('click', (event) => {
-        if (!downloadButton.classList.contains('aspNetDisabled')) {
-          console.log('Debug: Generating ICS file data...');
-          getFormInput();
-          generateIcsData();
-        } else {
-          console.log('Debug: Not generating ICS file data (requirements not met)');
-        }
         event.preventDefault();
         hideCalendarContext();
       });
 
-      /** Read form input fields and update global settings variables. */
+      /** Read settings from checkboxes. */
       function getFormInput() {
         INCLUDE_FINALS = finalsCheckbox.checked;
         SHORT_COURSE_NAMES = shortenCheckbox.checked;
         INCLUDE_DESCRIPTIONS = descriptionCheckbox.checked;
-        let [yyyy, mm, dd] = startDateInput.value.split('-');
-        QUARTER_START_YEAR = yyyy;
-        QUARTER_START_MONTH = mm;
-        QUARTER_START_DAY = dd;
-        [yyyy, mm, dd] = endDateInput.value.split('-');
-        QUARTER_END_YEAR = yyyy;
-        QUARTER_END_MONTH = mm;
-        QUARTER_END_DAY = dd;
       }
 
       /** @returns {string} */
@@ -397,9 +336,9 @@ function html(strings, ...values) {
       const [startTime, endTime] = this.time.split('-').map(t => Meeting.to24Hour(t.trim()));
       const days = this.days.split(' ');
       const startDatetime = new Date(Date.UTC(
-        Number(QUARTER_START_YEAR),
-        Number(QUARTER_START_MONTH) - 1,
-        Number(QUARTER_START_DAY),
+        QUARTER_START_YEAR,
+        QUARTER_START_MONTH - 1,
+        QUARTER_START_DAY,
         startTime.hours,
         startTime.minutes,
       ));
@@ -411,9 +350,9 @@ function html(strings, ...values) {
 
       // Compute UNTIL as end of quarter date in UTC (23:59:59Z)
       const untilUtc = new Date(Date.UTC(
-        Number(QUARTER_END_YEAR),
-        Number(QUARTER_END_MONTH) - 1,
-        Number(QUARTER_END_DAY),
+        QUARTER_END_YEAR,
+        QUARTER_END_MONTH - 1,
+        QUARTER_END_DAY,
         23, 59, 59
       ));
 
@@ -536,14 +475,12 @@ function html(strings, ...values) {
     const blob = new Blob([content], { type: 'text/calendar' });
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
+    document.body.insertAdjacentHTML('beforeend', `<a href="${url}" download="${filename}"></a>`);
+    const link = document.body.lastElementChild;
 
-    a.click();
+    link.click();
+    link.remove();
 
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 })();

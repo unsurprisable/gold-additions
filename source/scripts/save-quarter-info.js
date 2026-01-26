@@ -43,17 +43,23 @@ function getQuarterInfo() {
   return { [quarterId]: { name: quarterName, start: startDate, end: endDate } };
 }
 
-// Create a submit button and append it to the body
-const button = document.createElement('input');
-button.type = 'submit';
-button.value = 'Save Quarter Info';
-button.style.marginLeft = '10px';
-button.style.fontSize = '13px';
-button.style.padding = '5px 10px';
-document.querySelector('#pageContent_FirstDayInstructionLabel').insertAdjacentElement('afterend', button);
+const buttonHtml = `<input type="submit" value="Save Quarter Info" id="save-quarter-button" style="margin-left: 10px; font-size: 13px; padding: 5px 10px;">`;
+document.querySelector('#pageContent_quarterDatesLabel').insertAdjacentHTML('afterend', buttonHtml);
+
+const button = document.getElementById('save-quarter-button');
 
 button.addEventListener('click', function (event) {
   event.preventDefault(); // Prevent the default form submission
   saveDates(getQuarterInfo());
   button.blur(); // Remove focus to prevent darkened state
+  
+  // Change button text and disable it
+  button.value = 'Saved';
+  button.disabled = true;
+  
+  // Reset after 2 seconds
+  setTimeout(() => {
+    button.value = 'Save Quarter Info';
+    button.disabled = false;
+  }, 2000);
 });
