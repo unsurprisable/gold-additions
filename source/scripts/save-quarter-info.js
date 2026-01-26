@@ -1,32 +1,23 @@
 /* Copied from xziyu6/export-ucsb-gold (MIT License) */
 
-/* global chrome */
+/* global chrome, Meeting */
 
 /** 
- * Function to save quarter's start and end dates to Chrome storage
- * @param {{quarterId: string, quarterName: string, startDate: string, endDate: string}} quarterInfo 
+ * Save quarter information to Chrome storage
+ * @param {{[quarterId: string]: {name: string, start: string, end: string}}} quarterInfo 
  */
 function saveDates(quarterInfo) {
-  const { quarterId, quarterName, startDate, endDate } = quarterInfo;
-
   chrome.storage.local.get(['quarters'], (result) => {
-    let quarters = result.quarters || {};
+    const quarters = result.quarters || {};
+    Object.assign(quarters, quarterInfo);
 
-    // Update or add the quarter information
-    quarters[quarterId] = {
-      name: quarterName,
-      start: startDate,
-      end: endDate,
-    };
-
-    // save quarter info
-    chrome.storage.local.set({ quarters: quarters }, () => {
-      if (chrome.runtime.lastError)
+    chrome.storage.local.set({ quarters }, () => {
+      if (chrome.runtime.lastError) {
         console.error('Error saving quarter info:', chrome.runtime.lastError);
+      }
     });
   });
 }
-
 
 /** 
  * @param {string} dateString MM/DD/YYYY 
@@ -38,22 +29,18 @@ function formatDate(dateString) {
 }
 
 
-/** @returns {{quarterId: string, quarterName: string, startDate: string, endDate: string}} */
+/** @returns {{[quarterId: string]: {name: string, start: string, end: string}}} */
 function getQuarterInfo() {
-  const startDate = formatDate(
-    document.querySelector('#pageContent_FirstDayInstructionLabel').textContent.trim());
-  const endDate = formatDate(
-    document.querySelector('#pageContent_LastDayInstructionLabel').textContent.trim());
+  const getText = (selector) => document.querySelector(selector).textContent.trim();
+
   const quarter = document.querySelector('#pageContent_quarterDropDown option[selected="selected"]');
   const quarterId = quarter.getAttribute('value').trim();
   const quarterName = quarter.textContent.trim();
+  const startDate = formatDate(getText('#pageContent_FirstDayInstructionLabel'));
+  const endDate = formatDate(getText('#pageContent_LastDayInstructionLabel'));
+
   console.log(`Saved ${quarterId}: ${quarterName}`);
-  return {
-    quarterId: quarterId,
-    quarterName: quarterName,
-    startDate: startDate,
-    endDate: endDate,
-  };
+  return { [quarterId]: { name: quarterName, start: startDate, end: endDate } };
 }
 
 // Create a submit button and append it to the body

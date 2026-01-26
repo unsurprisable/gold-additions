@@ -38,6 +38,7 @@
         "https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx"
       ],
       "js": [
+        "scripts/utils.js",
         "scripts/save-quarter-info.js"
       ]
     }
