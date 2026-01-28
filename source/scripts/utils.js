@@ -45,16 +45,22 @@ class CalendarEvent {
   }
 
   /**
+   * Convert ISO string to ICS format without separators.
+   * @param {string} isoString 2025-01-25T10:25:30
+   * @returns {string} 20250125T102530
+   */
+  static isoToIcs(isoString) {
+    return isoString.replaceAll('-', '').replaceAll(':', '');
+  }
+
+  /**
    * Convert a Date to ICS datetime (local) without separators.
    * @param {Date} date Date(2025-01-25T10:25:30.000Z)
    * @returns {string} 20250125T102530
    */
   static dateToIcs(date) {
-    const iso = date.toISOString();
-    let icsDatetime = iso.split('.')[0];
-    icsDatetime = icsDatetime.replaceAll('-', '');
-    icsDatetime = icsDatetime.replaceAll(':', '');
-    return icsDatetime;
+    const iso = date.toISOString().split('.')[0];
+    return CalendarEvent.isoToIcs(iso);
   }
 
   /**

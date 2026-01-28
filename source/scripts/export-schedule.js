@@ -57,12 +57,14 @@ function html(strings, ...values) {
     includeFinals: true,
     shortenNames: true,
     includeDescriptions: false,
+    includeQuarterInfo: true,
   };
 
   // user settings (assigned when download button is pressed)
-  let INCLUDE_FINALS = null;
-  let SHORT_COURSE_NAMES = null;
-  let INCLUDE_DESCRIPTIONS = null;
+  let INCLUDE_FINALS = DEFAULT_SETTINGS.includeFinals;
+  let SHORT_COURSE_NAMES = DEFAULT_SETTINGS.shortenNames;
+  let INCLUDE_DESCRIPTIONS = DEFAULT_SETTINGS.includeDescriptions;
+  let INCLUDE_QUARTER_INFO = DEFAULT_SETTINGS.includeQuarterInfo;
   let QUARTER_START_YEAR = null;
   let QUARTER_START_MONTH = null;
   let QUARTER_START_DAY = null;
@@ -91,6 +93,7 @@ function html(strings, ...values) {
       const quarterWarning = document.getElementById('ics-quarter-warning');
       let QUARTERS_CACHE = {};
 
+      // TODO: turn this into a reusable function
       const finalsCheckbox = document.querySelector('#include-finals-checkbox input[type="checkbox"]');
       const finalsToggleText = document.getElementById('finals-toggle-text');
       finalsCheckbox.addEventListener('change', () => {
@@ -109,17 +112,23 @@ function html(strings, ...values) {
         descriptionToggleText.classList.toggle('checked', descriptionCheckbox.checked);
       });
 
+      const includeQuarterCheckbox = document.querySelector('#include-quarter-checkbox input[type="checkbox"]');
+      const includeQuarterToggleText = document.getElementById('include-quarter-toggle-text');
+      includeQuarterCheckbox.addEventListener('change', () => {
+        includeQuarterToggleText.classList.toggle('checked', includeQuarterCheckbox.checked);
+      });
+
       // Build the quarter dropdown from storage, defaulting to current page selection
       function refreshQuarterUI() {
-        if (quarterLabel) quarterLabel.textContent = PAGE_QUARTER_NAME;
+        quarterLabel.textContent = PAGE_QUARTER_NAME;
         chrome.storage.local.get(['quarters'], (result) => {
           QUARTERS_CACHE = result.quarters || {};
 
           // Update warning visibility and global dates based on saved dates
           const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
           if (q && q.start && q.end) {
-            [QUARTER_START_YEAR, QUARTER_START_MONTH, QUARTER_START_DAY] = q.start.split('-').map(Number);
-            [QUARTER_END_YEAR, QUARTER_END_MONTH, QUARTER_END_DAY] = q.end.split('-').map(Number);
+            [QUARTER_START_YEAR, QUARTER_START_MONTH, QUARTER_START_DAY] = ImportantDate.formatDate(q.start).split('-').map(Number);
+            [QUARTER_END_YEAR, QUARTER_END_MONTH, QUARTER_END_DAY] = ImportantDate.formatDate(q.end).split('-').map(Number);
 
             quarterWarning.style.display = 'none';
           } else {
@@ -143,7 +152,7 @@ function html(strings, ...values) {
       }
 
       /**
-       * @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean}} settings
+       * @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean, includeQuarterInfo: boolean}} settings
        */
       function applySettings(settings) {
         finalsCheckbox.checked = settings.includeFinals;
@@ -152,6 +161,8 @@ function html(strings, ...values) {
         shortenToggleText.classList.toggle('checked', settings.shortenNames);
         descriptionCheckbox.checked = settings.includeDescriptions;
         descriptionToggleText.classList.toggle('checked', settings.includeDescriptions);
+        includeQuarterCheckbox.checked = settings.includeQuarterInfo;
+        includeQuarterToggleText.classList.toggle('checked', settings.includeQuarterInfo);
       }
 
       /** Save the current ICS settings to Chrome storage. */
@@ -163,6 +174,7 @@ function html(strings, ...values) {
             includeFinals: INCLUDE_FINALS,
             shortenNames: SHORT_COURSE_NAMES,
             includeDescriptions: INCLUDE_DESCRIPTIONS,
+            includeQuarterInfo: INCLUDE_QUARTER_INFO,
           },
         });
       }
@@ -205,11 +217,27 @@ function html(strings, ...values) {
         INCLUDE_FINALS = finalsCheckbox.checked;
         SHORT_COURSE_NAMES = shortenCheckbox.checked;
         INCLUDE_DESCRIPTIONS = descriptionCheckbox.checked;
+        INCLUDE_QUARTER_INFO = includeQuarterCheckbox.checked;
       }
 
       /** @returns {string} */
       function generateIcsData() {
         const events = scrapeCourses();
+        
+        // Append quarter important date events if enabled and available
+        const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
+        if (INCLUDE_QUARTER_INFO && quarterInfo) {
+          if (quarterInfo.start) events.push(new ImportantDate('First Day of Instruction', quarterInfo.start));
+          if (quarterInfo.end) events.push(new ImportantDate('Last Day of Instruction', quarterInfo.end));
+          if (quarterInfo.pass1) events.push(new ImportantDate('Registration Pass 1 Opens', quarterInfo.pass1));
+          if (quarterInfo.pass2) events.push(new ImportantDate('Registration Pass 2 Opens', quarterInfo.pass2));
+          if (quarterInfo.pass3) events.push(new ImportantDate('Registration Pass 3 Opens', quarterInfo.pass3));
+          if (quarterInfo.addDeadline) events.push(new ImportantDate('Add Course Deadline', quarterInfo.addDeadline));
+          if (quarterInfo.dropDeadline) events.push(new ImportantDate('Drop Course Deadline', quarterInfo.dropDeadline));
+          if (quarterInfo.pNpDeadline) events.push(new ImportantDate('P/NP Deadline', quarterInfo.pNpDeadline));
+          if (quarterInfo.feeDeadline) events.push(new ImportantDate('Fee Deadline', quarterInfo.feeDeadline));
+        }
+        
         const icsFileData = CalendarEvent.toIcsCalendar(events);
         console.groupCollapsed('ICS File Data');
         console.log(icsFileData);
@@ -301,6 +329,8 @@ function html(strings, ...values) {
     return events;
   }
 
+  // TODO: move classes to separate file
+
   /** Represents a recurring course event (lecture/section) */
   class CourseClass extends CalendarEvent {
     /**
@@ -342,7 +372,6 @@ function html(strings, ...values) {
 
       const endDatetime = new Date(startDatetime);
       endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
-      const summary = SHORT_COURSE_NAMES ? this.name.split('-')[0].trim() : this.name;
 
       // Compute UNTIL as end of quarter date in UTC (23:59:59Z)
       const untilUtc = new Date(Date.UTC(
@@ -353,7 +382,7 @@ function html(strings, ...values) {
       ));
 
       return {
-        summary,
+        summary: SHORT_COURSE_NAMES ? this.name.split('-')[0].trim() : this.name,
         dtStart: CalendarEvent.dateToIcs(startDatetime),
         dtEnd: CalendarEvent.dateToIcs(endDatetime),
         days: days.map((d) => CalendarEvent.DAY_MAP[d]).join(','),
@@ -377,9 +406,10 @@ function html(strings, ...values) {
         `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
         `RRULE:FREQ=WEEKLY;BYDAY=${data.days};UNTIL=${data.untilDate}`,
         `LOCATION:${CalendarEvent.escapeText(data.location)}`,
-        `DESCRIPTION:${CalendarEvent.escapeText(data.description)}`,
-        'END:VEVENT'
-      ].join('\n');
+      ].concat(
+        data.description ? [`DESCRIPTION:${CalendarEvent.escapeText(data.description)}`] : [],
+        ['END:VEVENT']
+      ).join('\n');
     }
   }
 
@@ -406,9 +436,6 @@ function html(strings, ...values) {
 
       // Extract components: DayOfWeek, Month Day, Year Time - Time
       const match = this.datetime.match(FinalExam.DATETIME_REGEX);
-      if (!match) {
-        throw new Error(`Invalid datetime format: ${this.datetime}`);
-      }
       const [, monthName, day, year, timeRange] = match;
       const [startTimeStr, endTimeStr] = timeRange.split('-').map(t => t.trim());
 
@@ -432,10 +459,6 @@ function html(strings, ...values) {
         summary,
         dtStart: CalendarEvent.dateToIcs(startDatetime),
         dtEnd: CalendarEvent.dateToIcs(endDatetime),
-        days: '', // Not used for single events
-        untilDate: '', // Not used for single events
-        location: '',
-        description: '',
       };
     }
 
@@ -451,18 +474,97 @@ function html(strings, ...values) {
         `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
         `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
         `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
-        `LOCATION:${CalendarEvent.escapeText(data.location)}`,
-        `DESCRIPTION:${CalendarEvent.escapeText(data.description)}`,
-        'END:VEVENT'
-      ].join('\n');
+      ].concat(
+        data.location ? [`LOCATION:${CalendarEvent.escapeText(data.location)}`] : [],
+        data.description ? [`DESCRIPTION:${CalendarEvent.escapeText(data.description)}`] : [],
+        ['END:VEVENT']
+      ).join('\n');
+    }
+  }
+
+  /** Represents an academic important date (deadline, registration opening, etc.) */
+  class ImportantDate extends CalendarEvent {
+    /**
+     * @param {string} name       Name of the important date (e.g., "Add Deadline", "Registration Pass 1 Opens")
+     * @param {string} datetime   Raw date string from GOLD page (MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM)
+     */
+    constructor(name, datetime) {
+      super();
+      this.name = name;
+      this.datetime = datetime;
+    }
+
+    /**
+     * @param {string} dateString MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM
+     * @returns {string} YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS (ISO 8601)
+     */
+    static formatDate(datetime) {
+      const parts = datetime.trim().split(' ');
+      const [month, day, year] = parts[0].split('/').map(Number);
+      const dateFormatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      
+      if (parts.length === 3) {
+        // Has time component
+        const timeString = `${parts[1]} ${parts[2]}`; // HH:MM AM/PM
+        const { hours, minutes } = CalendarEvent.to24Hour(timeString);
+        return `${dateFormatted}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+      }
+      
+      return dateFormatted;
+    }
+
+    /** @returns {EventIcsData} */
+    getEventIcsData() {
+      const summary = this.name;
+      const isoString = ImportantDate.formatDate(this.datetime);
+      const startDatetime = new Date(isoString);
+      const isDateTime = this.datetime.trim().split(' ').length === 3;
+
+      const endDatetime = new Date(startDatetime);
+      if (!isDateTime) {
+        // All-day events: end at start of next day
+        endDatetime.setUTCDate(endDatetime.getUTCDate() + 1);
+      } else {
+        // Timed events: 1-hour duration
+        endDatetime.setUTCHours(endDatetime.getUTCHours() + 1);
+      }
+
+      return {
+        summary,
+        dtStart: CalendarEvent.dateToIcs(startDatetime),
+        dtEnd: CalendarEvent.dateToIcs(endDatetime),
+      };
+    }
+
+    /** @returns {string} */
+    toIcsEvent() {
+      const data = this.getEventIcsData();
+      const uid = CalendarEvent.generateUid();
+      const dtStamp = `${CalendarEvent.dateToIcs(new Date())}Z`;
+      const isDateTime = this.datetime.trim().split(' ').length === 3;
+
+      const base = [
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
+      ];
+
+      const dateLines = isDateTime
+        ? [
+            `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
+            `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
+          ]
+        : [
+            `DTSTART;VALUE=DATE:${data.dtStart.slice(0, 8)}`,
+            `DTEND;VALUE=DATE:${data.dtEnd.slice(0, 8)}`,
+          ];
+
+      return base.concat(dateLines, ['END:VEVENT']).join('\n');
     }
   }
 
   // ===== Utility =====
-  /**
-   * @param {string} filename
-   * @param {string} content
-   */
   /**
    * @param {string} filename
    * @param {string} content
