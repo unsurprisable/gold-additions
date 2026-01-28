@@ -24,7 +24,6 @@ function html(strings, ...values) {
   // ===== Export Button Setup =====
   const hrElement = scheduleContainer.querySelector('hr');
   hrElement.style = 'margin-top: 10px';
-
   const exportButtonHtml = html`
     <div id="gold-export-container" style="display: inline-block; text-align: center; margin-top: 15px">
       <a id="gold-export-button" class="gold-button" role="button" href="#">Export Schedule to Calendar</a>
@@ -35,6 +34,7 @@ function html(strings, ...values) {
 
   const exportButton = scheduleContainer.querySelector('#gold-export-button');
   exportButton.addEventListener('click', (event) => {
+    // for some reason GOLD uses <a> for buttons, so we used the same style
     event.preventDefault();
     showCalendarContext();
   });
@@ -53,24 +53,40 @@ function html(strings, ...values) {
     setTimeout(() => backdrop.classList.add('menu-hidden'), SETTINGS_ANIMATION_TIME);
   }
 
-  const DEFAULT_SETTINGS = {
-    includeFinals: true,
-    shortenNames: true,
-    includeDescriptions: false,
-    includeQuarterInfo: true,
+  const settings = {
+    includeFinals: {
+      default: true,
+      current: true,
+      checkboxSelector: '#include-finals-checkbox input[type="checkbox"]',
+      toggleTextSelector: '#finals-toggle-text',
+      checkboxElement: null,
+      toggleTextElement: null,
+    },
+    shortenNames: {
+      default: true,
+      current: true,
+      checkboxSelector: '#shorten-course-checkbox input[type="checkbox"]',
+      toggleTextSelector: '#shorten-toggle-text',
+      checkboxElement: null,
+      toggleTextElement: null,
+    },
+    includeDescriptions: {
+      default: false,
+      current: false,
+      checkboxSelector: '#include-description-checkbox input[type="checkbox"]',
+      toggleTextSelector: '#description-toggle-text',
+      checkboxElement: null,
+      toggleTextElement: null,
+    },
+    includeQuarterInfo: {
+      default: true,
+      current: true,
+      checkboxSelector: '#include-quarter-checkbox input[type="checkbox"]',
+      toggleTextSelector: '#include-quarter-toggle-text',
+      checkboxElement: null,
+      toggleTextElement: null,
+    },
   };
-
-  // user settings (assigned when download button is pressed)
-  let INCLUDE_FINALS = DEFAULT_SETTINGS.includeFinals;
-  let SHORT_COURSE_NAMES = DEFAULT_SETTINGS.shortenNames;
-  let INCLUDE_DESCRIPTIONS = DEFAULT_SETTINGS.includeDescriptions;
-  let INCLUDE_QUARTER_INFO = DEFAULT_SETTINGS.includeQuarterInfo;
-  let QUARTER_START_YEAR = null;
-  let QUARTER_START_MONTH = null;
-  let QUARTER_START_DAY = null;
-  let QUARTER_END_YEAR = null;
-  let QUARTER_END_MONTH = null;
-  let QUARTER_END_DAY = null;
 
   // ===== Settings Modal Setup =====
   // load HTML content asynchronously
@@ -83,6 +99,12 @@ function html(strings, ...values) {
       const cssLink = document.getElementById('ics-settings-css');
       cssLink.href = chrome.runtime.getURL('css/ics-settings.css');
 
+      // Cache DOM elements for all settings
+      Object.entries(settings).forEach(([, config]) => {
+        config.checkboxElement = document.querySelector(config.checkboxSelector);
+        config.toggleTextElement = document.querySelector(config.toggleTextSelector);
+      });
+
       backdrop.addEventListener('click', (event) => {
         if (event.target === backdrop) {
           hideCalendarContext();
@@ -93,29 +115,12 @@ function html(strings, ...values) {
       const quarterWarning = document.getElementById('ics-quarter-warning');
       let QUARTERS_CACHE = {};
 
-      // TODO: turn this into a reusable function
-      const finalsCheckbox = document.querySelector('#include-finals-checkbox input[type="checkbox"]');
-      const finalsToggleText = document.getElementById('finals-toggle-text');
-      finalsCheckbox.addEventListener('change', () => {
-        finalsToggleText.classList.toggle('checked', finalsCheckbox.checked);
-      });
-
-      const shortenCheckbox = document.querySelector('#shorten-course-checkbox input[type="checkbox"]');
-      const shortenToggleText = document.getElementById('shorten-toggle-text');
-      shortenCheckbox.addEventListener('change', () => {
-        shortenToggleText.classList.toggle('checked', shortenCheckbox.checked);
-      });
-
-      const descriptionCheckbox = document.querySelector('#include-description-checkbox input[type="checkbox"]');
-      const descriptionToggleText = document.getElementById('description-toggle-text');
-      descriptionCheckbox.addEventListener('change', () => {
-        descriptionToggleText.classList.toggle('checked', descriptionCheckbox.checked);
-      });
-
-      const includeQuarterCheckbox = document.querySelector('#include-quarter-checkbox input[type="checkbox"]');
-      const includeQuarterToggleText = document.getElementById('include-quarter-toggle-text');
-      includeQuarterCheckbox.addEventListener('change', () => {
-        includeQuarterToggleText.classList.toggle('checked', includeQuarterCheckbox.checked);
+      // update checkbox status to its display text
+      Object.entries(settings).forEach(([, config]) => {
+        config.checkboxElement.addEventListener('change', () => {
+          config.toggleTextElement.classList.toggle('checked', config.checkboxElement.checked);
+          config.current = config.checkboxElement.checked;
+        });
       });
 
       // Build the quarter dropdown from storage, defaulting to current page selection
@@ -126,9 +131,9 @@ function html(strings, ...values) {
 
           // Update warning visibility and global dates based on saved dates
           const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
-          if (q && q.start && q.end) {
-            [QUARTER_START_YEAR, QUARTER_START_MONTH, QUARTER_START_DAY] = ImportantDate.formatDate(q.start).split('-').map(Number);
-            [QUARTER_END_YEAR, QUARTER_END_MONTH, QUARTER_END_DAY] = ImportantDate.formatDate(q.end).split('-').map(Number);
+          if (q) {
+            [CourseClass.QUARTER_START_YEAR, CourseClass.QUARTER_START_MONTH, CourseClass.QUARTER_START_DAY] = ImportantDate.formatDate(q.start).split('-').map(Number);
+            [CourseClass.QUARTER_END_YEAR, CourseClass.QUARTER_END_MONTH, CourseClass.QUARTER_END_DAY] = ImportantDate.formatDate(q.end).split('-').map(Number);
 
             quarterWarning.style.display = 'none';
           } else {
@@ -152,40 +157,46 @@ function html(strings, ...values) {
       }
 
       /**
-       * @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean, includeQuarterInfo: boolean}} settings
+       * @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean, includeQuarterInfo: boolean}} newSettings
        */
-      function applySettings(settings) {
-        finalsCheckbox.checked = settings.includeFinals;
-        finalsToggleText.classList.toggle('checked', settings.includeFinals);
-        shortenCheckbox.checked = settings.shortenNames;
-        shortenToggleText.classList.toggle('checked', settings.shortenNames);
-        descriptionCheckbox.checked = settings.includeDescriptions;
-        descriptionToggleText.classList.toggle('checked', settings.includeDescriptions);
-        includeQuarterCheckbox.checked = settings.includeQuarterInfo;
-        includeQuarterToggleText.classList.toggle('checked', settings.includeQuarterInfo);
+      function applySettings(newSettings) {
+        Object.entries(newSettings).forEach(([key, value]) => {
+          const config = settings[key];
+          config.checkboxElement.checked = value;
+          config.toggleTextElement.classList.toggle('checked', value);
+          config.current = value;
+        });
       }
 
+      /** @returns {Object} Object with all settings set to their default values */
+      function getDefaultSettings() {
+        return Object.fromEntries(
+          Object.entries(settings).map(([key, config]) => [key, config.default])
+        );
+      }
+
+      /** @returns {Object} Object with all current setting values */
+      function getCurrentSettings() {
+        return Object.fromEntries(
+          Object.entries(settings).map(([key, config]) => [key, config.current])
+        );
+      }
+
+      // TODO: move helpers to end of file, don't mix with main logic
       /** Save the current ICS settings to Chrome storage. */
       function saveIcsSettings() {
         console.log('Saving ICS settings...');
         if (!chrome?.storage?.local) return;
-        chrome.storage.local.set({
-          icsSettings: {
-            includeFinals: INCLUDE_FINALS,
-            shortenNames: SHORT_COURSE_NAMES,
-            includeDescriptions: INCLUDE_DESCRIPTIONS,
-            includeQuarterInfo: INCLUDE_QUARTER_INFO,
-          },
-        });
+        chrome.storage.local.set({ icsSettings: getCurrentSettings() });
       }
 
       if (chrome?.storage?.local) {
         chrome.storage.local.get('icsSettings', (result) => {
-          const settings = { ...DEFAULT_SETTINGS, ...(result?.icsSettings || {}) };
-          applySettings(settings);
+          const newSettings = { ...getDefaultSettings(), ...(result?.icsSettings || {}) };
+          applySettings(newSettings);
         });
       } else {
-        applySettings(DEFAULT_SETTINGS);
+        applySettings(getDefaultSettings());
       }
 
       const downloadButton = document.getElementById('ics-download');
@@ -194,7 +205,6 @@ function html(strings, ...values) {
 
       downloadButton.addEventListener('click', () => {
         console.log('Generating ICS file data...');
-        getFormInput();
         const icsFileData = generateIcsData();
         downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
         saveIcsSettings();
@@ -204,7 +214,7 @@ function html(strings, ...values) {
       resetButton.addEventListener('click', (event) => {
         event.preventDefault();
         console.log('Resetting to default settings...');
-        applySettings(DEFAULT_SETTINGS);
+        applySettings(getDefaultSettings());
       });
 
       cancelButton.addEventListener('click', (event) => {
@@ -212,21 +222,13 @@ function html(strings, ...values) {
         hideCalendarContext();
       });
 
-      /** Read settings from checkboxes. */
-      function getFormInput() {
-        INCLUDE_FINALS = finalsCheckbox.checked;
-        SHORT_COURSE_NAMES = shortenCheckbox.checked;
-        INCLUDE_DESCRIPTIONS = descriptionCheckbox.checked;
-        INCLUDE_QUARTER_INFO = includeQuarterCheckbox.checked;
-      }
-
       /** @returns {string} */
       function generateIcsData() {
         const events = scrapeCourses();
-        
+
         // Append quarter important date events if enabled and available
         const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
-        if (INCLUDE_QUARTER_INFO && quarterInfo) {
+        if (settings.includeQuarterInfo.current && quarterInfo) {
           if (quarterInfo.start) events.push(new ImportantDate('First Day of Instruction', quarterInfo.start));
           if (quarterInfo.end) events.push(new ImportantDate('Last Day of Instruction', quarterInfo.end));
           if (quarterInfo.pass1) events.push(new ImportantDate('Registration Pass 1 Opens', quarterInfo.pass1));
@@ -237,7 +239,7 @@ function html(strings, ...values) {
           if (quarterInfo.pNpDeadline) events.push(new ImportantDate('P/NP Deadline', quarterInfo.pNpDeadline));
           if (quarterInfo.feeDeadline) events.push(new ImportantDate('Fee Deadline', quarterInfo.feeDeadline));
         }
-        
+
         const icsFileData = CalendarEvent.toIcsCalendar(events);
         console.groupCollapsed('ICS File Data');
         console.log(icsFileData);
@@ -308,7 +310,7 @@ function html(strings, ...values) {
 
     // ===== Final Exams =====
 
-    if (INCLUDE_FINALS) {
+    if (settings.includeFinals.current) {
       // last line is a note (weird design)
       const finalExamSection = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
       /*
@@ -320,6 +322,7 @@ function html(strings, ...values) {
       finalExamSection.forEach((examItem) => {
         const name = examItem.children[0].textContent.trim().replace(/\s+/g, ' ');
         const datetime = examItem.children[1].textContent.trim();
+        // sometimes the field says stuff like "Contact Professor for Final Exam Information"
         if (FinalExam.DATETIME_REGEX.test(datetime)) {
           events.push(new FinalExam(name, datetime));
         }
@@ -330,9 +333,16 @@ function html(strings, ...values) {
   }
 
   // TODO: move classes to separate file
+  // TODO: standardize class structures
 
   /** Represents a recurring course event (lecture/section) */
   class CourseClass extends CalendarEvent {
+    static QUARTER_START_YEAR = null;
+    static QUARTER_START_MONTH = null;
+    static QUARTER_START_DAY = null;
+    static QUARTER_END_YEAR = null;
+    static QUARTER_END_MONTH = null;
+    static QUARTER_END_DAY = null;
     /**
      * Used to store and modify course data in its raw HTML form.
      * 
@@ -362,9 +372,9 @@ function html(strings, ...values) {
       const [startTime, endTime] = this.time.split('-').map(t => CalendarEvent.to24Hour(t.trim()));
       const days = this.days.split(' ');
       const startDatetime = new Date(Date.UTC(
-        QUARTER_START_YEAR,
-        QUARTER_START_MONTH - 1,
-        QUARTER_START_DAY,
+        CourseClass.QUARTER_START_YEAR,
+        CourseClass.QUARTER_START_MONTH - 1,
+        CourseClass.QUARTER_START_DAY,
         startTime.hours,
         startTime.minutes,
       ));
@@ -375,20 +385,20 @@ function html(strings, ...values) {
 
       // Compute UNTIL as end of quarter date in UTC (23:59:59Z)
       const untilUtc = new Date(Date.UTC(
-        QUARTER_END_YEAR,
-        QUARTER_END_MONTH - 1,
-        QUARTER_END_DAY,
+        CourseClass.QUARTER_END_YEAR,
+        CourseClass.QUARTER_END_MONTH - 1,
+        CourseClass.QUARTER_END_DAY,
         23, 59, 59
       ));
 
       return {
-        summary: SHORT_COURSE_NAMES ? this.name.split('-')[0].trim() : this.name,
+        summary: settings.shortenNames.current ? this.name.split('-')[0].trim() : this.name,
         dtStart: CalendarEvent.dateToIcs(startDatetime),
         dtEnd: CalendarEvent.dateToIcs(endDatetime),
         days: days.map((d) => CalendarEvent.DAY_MAP[d]).join(','),
         untilDate: `${CalendarEvent.dateToIcs(untilUtc)}Z`,
         location: this.location,
-        description: INCLUDE_DESCRIPTIONS ? `Instructor: ${this.professor.split('\n').join(', ')}` : '',
+        description: settings.includeDescriptions.current ? `Instructor: ${this.professor.split('\n').join(', ')}` : '',
       };
     }
 
@@ -453,7 +463,7 @@ function html(strings, ...values) {
       const endDatetime = new Date(startDatetime);
       endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
 
-      const summary = SHORT_COURSE_NAMES ? `${this.name.split('-')[0].trim()} - Final Exam` : `${this.name} - Final Exam`;
+      const summary = settings.shortenNames.current ? `${this.name.split('-')[0].trim()} - Final Exam` : `${this.name} - Final Exam`;
 
       return {
         summary,
@@ -502,14 +512,14 @@ function html(strings, ...values) {
       const parts = datetime.trim().split(' ');
       const [month, day, year] = parts[0].split('/').map(Number);
       const dateFormatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      
+
       if (parts.length === 3) {
         // Has time component
         const timeString = `${parts[1]} ${parts[2]}`; // HH:MM AM/PM
         const { hours, minutes } = CalendarEvent.to24Hour(timeString);
         return `${dateFormatted}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
       }
-      
+
       return dateFormatted;
     }
 
@@ -552,13 +562,13 @@ function html(strings, ...values) {
 
       const dateLines = isDateTime
         ? [
-            `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
-            `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
-          ]
+          `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
+          `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
+        ]
         : [
-            `DTSTART;VALUE=DATE:${data.dtStart.slice(0, 8)}`,
-            `DTEND;VALUE=DATE:${data.dtEnd.slice(0, 8)}`,
-          ];
+          `DTSTART;VALUE=DATE:${data.dtStart.slice(0, 8)}`,
+          `DTEND;VALUE=DATE:${data.dtEnd.slice(0, 8)}`,
+        ];
 
       return base.concat(dateLines, ['END:VEVENT']).join('\n');
     }
