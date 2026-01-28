@@ -299,7 +299,7 @@ class ImportantDate extends CalendarEvent {
    * @param {string} dateString MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM
    * @returns {string} YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS (ISO 8601)
    */
-  static formatDate(datetime) {
+  static toIso(datetime) {
     const parts = datetime.trim().split(' ');
     const [month, day, year] = parts[0].split('/').map(Number);
     const dateFormatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
@@ -317,7 +317,7 @@ class ImportantDate extends CalendarEvent {
   /** @returns {EventIcsData} */
   getEventIcsData() {
     const summary = this.name;
-    const isoString = ImportantDate.formatDate(this.datetime);
+    const isoString = ImportantDate.toIso(this.datetime);
     const startDatetime = new Date(isoString);
     const isDateTime = this.datetime.trim().split(' ').length === 3;
 

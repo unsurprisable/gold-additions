@@ -1,4 +1,4 @@
-/* global chrome, CalendarEvent, CourseClass, FinalExam, ImportantDate*/
+/* global CalendarEvent, CourseClass, FinalExam, ImportantDate*/
 
 const settings = {
   includeFinals: {
@@ -103,31 +103,29 @@ const settings = {
     // Refresh once on setup
     refreshQuarterUI();
 
-    // Listen for storage changes from the Registration page and refresh when returning
-    if (chrome?.storage?.onChanged) {
-      chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName !== 'local') return;
-        if (changes.quarters) {
-          refreshQuarterUI();
-        }
-      });
-    }
+    // Refresh UI when quarter info is updated in storage
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== 'local') return;
+      if (changes.quarters) {
+        refreshQuarterUI();
+      }
+    });
 
-
-    if (chrome?.storage?.local) {
-      chrome.storage.local.get('icsSettings', (result) => {
-        const newSettings = { ...getDefaultSettings(), ...(result?.icsSettings || {}) };
-        applySettings(newSettings);
-      });
-    } else {
-      applySettings(getDefaultSettings());
-    }
+    // Apply saved settings from storage
+    chrome.storage.local.get('icsSettings', (result) => {
+      const newSettings = { ...getDefaultSettings(), ...(result?.icsSettings || {}) };
+      applySettings(newSettings);
+    });
 
     const downloadButton = document.getElementById('ics-download');
     const resetButton = document.getElementById('ics-reset');
     const cancelButton = document.getElementById('ics-cancel');
 
-    downloadButton.addEventListener('click', () => {
+    downloadButton.addEventListener('click', (event) => {
+      if (downloadButton.classList.contains('aspNetDisabled')) {
+        event.preventDefault();
+        return; // prob not the best way to do this but wtv
+      }
       console.log('Generating ICS file data...');
       const icsFileData = generateIcsData();
       downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
@@ -266,15 +264,20 @@ const settings = {
     chrome.storage.local.get(['quarters'], (result) => {
       QUARTERS_CACHE = result.quarters || {};
 
-      // Update warning visibility and global dates based on saved dates
+      // Update warning visibility
       const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
       const quarterWarning = document.getElementById('ics-quarter-warning');
+      const downloadButton = document.getElementById('ics-download');
+
+      // Update download button state and CourseClass quarter date info
       if (q) {
-        [CourseClass.QUARTER_START_YEAR, CourseClass.QUARTER_START_MONTH, CourseClass.QUARTER_START_DAY] = ImportantDate.formatDate(q.start).split('-').map(Number);
-        [CourseClass.QUARTER_END_YEAR, CourseClass.QUARTER_END_MONTH, CourseClass.QUARTER_END_DAY] = ImportantDate.formatDate(q.end).split('-').map(Number);
+        [CourseClass.QUARTER_START_YEAR, CourseClass.QUARTER_START_MONTH, CourseClass.QUARTER_START_DAY] = ImportantDate.toIso(q.start).split('-').map(Number);
+        [CourseClass.QUARTER_END_YEAR, CourseClass.QUARTER_END_MONTH, CourseClass.QUARTER_END_DAY] = ImportantDate.toIso(q.end).split('-').map(Number);
         quarterWarning.style.display = 'none';
+        downloadButton.classList.remove('aspNetDisabled');
       } else {
         quarterWarning.style.display = '';
+        downloadButton.classList.add('aspNetDisabled');
       }
     });
   }
@@ -316,7 +319,6 @@ const settings = {
   /** Save the current ICS settings to Chrome storage. */
   function saveIcsSettings() {
     console.log('Saving ICS settings...');
-    if (!chrome?.storage?.local) return;
     chrome.storage.local.set({ icsSettings: getCurrentSettings() });
   }
 
@@ -328,6 +330,7 @@ const settings = {
     const blob = new Blob([content], { type: 'text/calendar' });
     const url = URL.createObjectURL(blob);
 
+    // script can't download directly, so using temporary link
     document.body.insertAdjacentHTML('beforeend', `<a href="${url}" download="${filename}"></a>`);
     const link = document.body.lastElementChild;
 
