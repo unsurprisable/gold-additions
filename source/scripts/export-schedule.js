@@ -1,15 +1,5 @@
 /* global chrome, CalendarEvent, CourseClass, FinalExam, ImportantDate*/
 
-// for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
-/**
- * @param {TemplateStringsArray} strings
- * @param {...any} values
- * @returns {string}
- */
-function html(strings, ...values) {
-  return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
-}
-
 const settings = {
   includeFinals: {
     default: true,
@@ -55,6 +45,7 @@ const settings = {
   const currentQuarterOption = document.querySelector('#ctl00_pageContent_quarterDropDown option[selected="selected"]');
   const PAGE_QUARTER_ID = currentQuarterOption?.getAttribute('value')?.trim() || '';
   const PAGE_QUARTER_NAME = currentQuarterOption?.textContent?.trim() || '';
+  let QUARTERS_CACHE = {};
 
   // ===== Export Button Setup =====
   const hrElement = scheduleContainer.querySelector('hr');
@@ -74,184 +65,115 @@ const settings = {
     showCalendarContext();
   });
 
-  // ===== Backdrop & Modal Helpers =====
+  // ===== Backdrop Setup =====
   document.body.insertAdjacentHTML('beforeend', '<div id="ics-settings-backdrop" class="menu-hidden"></div>');
   const backdrop = document.getElementById('ics-settings-backdrop');
-
-  function showCalendarContext() {
-    backdrop.classList.remove('menu-hidden');
-    backdrop.classList.add('menu-visible');
-  }
-
-  function hideCalendarContext() {
-    backdrop.classList.remove('menu-visible');
-    setTimeout(() => backdrop.classList.add('menu-hidden'), SETTINGS_ANIMATION_TIME);
-  }
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop) {
+      hideCalendarContext();
+    }
+  });
 
   // ===== Settings Modal Setup =====
   // load HTML content asynchronously
   (async () => {
-    try {
-      const response = await fetch(chrome.runtime.getURL('html/ics-settings.html'));
-      const modalHtml = await response.text();
-      backdrop.insertAdjacentHTML('beforeend', modalHtml);
+    // Load HTML
+    const response = await fetch(chrome.runtime.getURL('html/ics-settings.html'));
+    const modalHtml = await response.text();
+    backdrop.insertAdjacentHTML('beforeend', modalHtml);
 
-      const cssLink = document.getElementById('ics-settings-css');
-      cssLink.href = chrome.runtime.getURL('css/ics-settings.css');
+    // Load CSS
+    const cssLink = document.getElementById('ics-settings-css');
+    cssLink.href = chrome.runtime.getURL('css/ics-settings.css');
 
-      // Cache DOM elements for all settings
-      Object.entries(settings).forEach(([, config]) => {
-        config.checkboxElement = document.querySelector(config.checkboxSelector);
-        config.toggleTextElement = document.querySelector(config.toggleTextSelector);
+    // Cache DOM elements for all settings
+    Object.entries(settings).forEach(([, config]) => {
+      config.checkboxElement = document.querySelector(config.checkboxSelector);
+      config.toggleTextElement = document.querySelector(config.toggleTextSelector);
+    });
+
+    // Update checkbox status to its display text
+    Object.entries(settings).forEach(([, config]) => {
+      config.checkboxElement.addEventListener('change', () => {
+        config.toggleTextElement.classList.toggle('checked', config.checkboxElement.checked);
+        config.current = config.checkboxElement.checked;
       });
+    });
 
-      backdrop.addEventListener('click', (event) => {
-        if (event.target === backdrop) {
-          hideCalendarContext();
+    // Refresh once on setup
+    refreshQuarterUI();
+
+    // Listen for storage changes from the Registration page and refresh when returning
+    if (chrome?.storage?.onChanged) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local') return;
+        if (changes.quarters) {
+          refreshQuarterUI();
         }
       });
-
-      const quarterLabel = document.getElementById('ics-quarter-label');
-      const quarterWarning = document.getElementById('ics-quarter-warning');
-      let QUARTERS_CACHE = {};
-
-      // update checkbox status to its display text
-      Object.entries(settings).forEach(([, config]) => {
-        config.checkboxElement.addEventListener('change', () => {
-          config.toggleTextElement.classList.toggle('checked', config.checkboxElement.checked);
-          config.current = config.checkboxElement.checked;
-        });
-      });
-
-      // Build the quarter dropdown from storage, defaulting to current page selection
-      function refreshQuarterUI() {
-        quarterLabel.textContent = PAGE_QUARTER_NAME;
-        chrome.storage.local.get(['quarters'], (result) => {
-          QUARTERS_CACHE = result.quarters || {};
-
-          // Update warning visibility and global dates based on saved dates
-          const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
-          if (q) {
-            [CourseClass.QUARTER_START_YEAR, CourseClass.QUARTER_START_MONTH, CourseClass.QUARTER_START_DAY] = ImportantDate.formatDate(q.start).split('-').map(Number);
-            [CourseClass.QUARTER_END_YEAR, CourseClass.QUARTER_END_MONTH, CourseClass.QUARTER_END_DAY] = ImportantDate.formatDate(q.end).split('-').map(Number);
-
-            quarterWarning.style.display = 'none';
-          } else {
-            quarterWarning.style.display = '';
-          }
-
-        });
-      }
-
-      // Refresh quarter UI once on setup
-      refreshQuarterUI();
-
-      // Listen for storage changes from the Registration page and refresh when returning
-      if (chrome?.storage?.onChanged) {
-        chrome.storage.onChanged.addListener((changes, areaName) => {
-          if (areaName !== 'local') return;
-          if (changes.quarters) {
-            refreshQuarterUI();
-          }
-        });
-      }
-
-      /**
-       * @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean, includeQuarterInfo: boolean}} newSettings
-       */
-      function applySettings(newSettings) {
-        Object.entries(newSettings).forEach(([key, value]) => {
-          const config = settings[key];
-          config.checkboxElement.checked = value;
-          config.toggleTextElement.classList.toggle('checked', value);
-          config.current = value;
-        });
-      }
-
-      /** @returns {Object} Object with all settings set to their default values */
-      function getDefaultSettings() {
-        return Object.fromEntries(
-          Object.entries(settings).map(([key, config]) => [key, config.default])
-        );
-      }
-
-      /** @returns {Object} Object with all current setting values */
-      function getCurrentSettings() {
-        return Object.fromEntries(
-          Object.entries(settings).map(([key, config]) => [key, config.current])
-        );
-      }
-
-      // TODO: move helpers to end of file, don't mix with main logic
-      /** Save the current ICS settings to Chrome storage. */
-      function saveIcsSettings() {
-        console.log('Saving ICS settings...');
-        if (!chrome?.storage?.local) return;
-        chrome.storage.local.set({ icsSettings: getCurrentSettings() });
-      }
-
-      if (chrome?.storage?.local) {
-        chrome.storage.local.get('icsSettings', (result) => {
-          const newSettings = { ...getDefaultSettings(), ...(result?.icsSettings || {}) };
-          applySettings(newSettings);
-        });
-      } else {
-        applySettings(getDefaultSettings());
-      }
-
-      const downloadButton = document.getElementById('ics-download');
-      const resetButton = document.getElementById('ics-reset');
-      const cancelButton = document.getElementById('ics-cancel');
-
-      downloadButton.addEventListener('click', () => {
-        console.log('Generating ICS file data...');
-        const icsFileData = generateIcsData();
-        downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
-        saveIcsSettings();
-        hideCalendarContext();
-      });
-
-      resetButton.addEventListener('click', (event) => {
-        event.preventDefault();
-        console.log('Resetting to default settings...');
-        applySettings(getDefaultSettings());
-      });
-
-      cancelButton.addEventListener('click', (event) => {
-        event.preventDefault();
-        hideCalendarContext();
-      });
-
-      /** @returns {string} */
-      function generateIcsData() {
-        const events = scrapeCourses();
-
-        // Append quarter important date events if enabled and available
-        const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
-        if (settings.includeQuarterInfo.current && quarterInfo) {
-          if (quarterInfo.start) events.push(new ImportantDate('First Day of Instruction', quarterInfo.start));
-          if (quarterInfo.end) events.push(new ImportantDate('Last Day of Instruction', quarterInfo.end));
-          if (quarterInfo.pass1) events.push(new ImportantDate('Registration Pass 1 Opens', quarterInfo.pass1));
-          if (quarterInfo.pass2) events.push(new ImportantDate('Registration Pass 2 Opens', quarterInfo.pass2));
-          if (quarterInfo.pass3) events.push(new ImportantDate('Registration Pass 3 Opens', quarterInfo.pass3));
-          if (quarterInfo.addDeadline) events.push(new ImportantDate('Add Course Deadline', quarterInfo.addDeadline));
-          if (quarterInfo.dropDeadline) events.push(new ImportantDate('Drop Course Deadline', quarterInfo.dropDeadline));
-          if (quarterInfo.pNpDeadline) events.push(new ImportantDate('P/NP Deadline', quarterInfo.pNpDeadline));
-          if (quarterInfo.feeDeadline) events.push(new ImportantDate('Fee Deadline', quarterInfo.feeDeadline));
-        }
-
-        const icsFileData = CalendarEvent.toIcsCalendar(events);
-        console.groupCollapsed('ICS File Data');
-        console.log(icsFileData);
-        console.groupEnd();
-        return icsFileData;
-      }
-    } catch (error) {
-      console.error('Failed to load settings HTML:', error);
     }
+
+
+    if (chrome?.storage?.local) {
+      chrome.storage.local.get('icsSettings', (result) => {
+        const newSettings = { ...getDefaultSettings(), ...(result?.icsSettings || {}) };
+        applySettings(newSettings);
+      });
+    } else {
+      applySettings(getDefaultSettings());
+    }
+
+    const downloadButton = document.getElementById('ics-download');
+    const resetButton = document.getElementById('ics-reset');
+    const cancelButton = document.getElementById('ics-cancel');
+
+    downloadButton.addEventListener('click', () => {
+      console.log('Generating ICS file data...');
+      const icsFileData = generateIcsData();
+      downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
+      saveIcsSettings();
+      hideCalendarContext();
+    });
+
+    resetButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      console.log('Resetting to default settings...');
+      applySettings(getDefaultSettings());
+    });
+
+    cancelButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      hideCalendarContext();
+    });
+
   })();
 
   // ===== Data Processing =====
+
+  /** @returns {string} */
+  function generateIcsData() {
+    const events = scrapeCourses();
+
+    // Append quarter important date events if enabled and available
+    const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
+    if (settings.includeQuarterInfo.current && quarterInfo) {
+      if (quarterInfo.start) events.push(new ImportantDate('First Day of Instruction', quarterInfo.start));
+      if (quarterInfo.end) events.push(new ImportantDate('Last Day of Instruction', quarterInfo.end));
+      if (quarterInfo.pass1) events.push(new ImportantDate('Registration Pass 1 Opens', quarterInfo.pass1));
+      if (quarterInfo.pass2) events.push(new ImportantDate('Registration Pass 2 Opens', quarterInfo.pass2));
+      if (quarterInfo.pass3) events.push(new ImportantDate('Registration Pass 3 Opens', quarterInfo.pass3));
+      if (quarterInfo.addDeadline) events.push(new ImportantDate('Add Course Deadline', quarterInfo.addDeadline));
+      if (quarterInfo.dropDeadline) events.push(new ImportantDate('Drop Course Deadline', quarterInfo.dropDeadline));
+      if (quarterInfo.pNpDeadline) events.push(new ImportantDate('P/NP Deadline', quarterInfo.pNpDeadline));
+      if (quarterInfo.feeDeadline) events.push(new ImportantDate('Fee Deadline', quarterInfo.feeDeadline));
+    }
+
+    const icsFileData = CalendarEvent.toIcsCalendar(events);
+    console.groupCollapsed('ICS File Data');
+    console.log(icsFileData);
+    console.groupEnd();
+    return icsFileData;
+  }
 
   // TODO: separate MW classes into two events
 
@@ -335,7 +257,69 @@ const settings = {
     return events;
   }
 
-  // ===== Utility =====
+  // ===== Helpers =====
+
+  /** Read quarter data from storage and update the UI accordingly. */
+  function refreshQuarterUI() {
+    const quarterLabel = document.getElementById('ics-quarter-label');
+    quarterLabel.textContent = PAGE_QUARTER_NAME;
+    chrome.storage.local.get(['quarters'], (result) => {
+      QUARTERS_CACHE = result.quarters || {};
+
+      // Update warning visibility and global dates based on saved dates
+      const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
+      const quarterWarning = document.getElementById('ics-quarter-warning');
+      if (q) {
+        [CourseClass.QUARTER_START_YEAR, CourseClass.QUARTER_START_MONTH, CourseClass.QUARTER_START_DAY] = ImportantDate.formatDate(q.start).split('-').map(Number);
+        [CourseClass.QUARTER_END_YEAR, CourseClass.QUARTER_END_MONTH, CourseClass.QUARTER_END_DAY] = ImportantDate.formatDate(q.end).split('-').map(Number);
+        quarterWarning.style.display = 'none';
+      } else {
+        quarterWarning.style.display = '';
+      }
+    });
+  }
+
+  function showCalendarContext() {
+    backdrop.classList.remove('menu-hidden');
+    backdrop.classList.add('menu-visible');
+  }
+
+  function hideCalendarContext() {
+    backdrop.classList.remove('menu-visible');
+    setTimeout(() => backdrop.classList.add('menu-hidden'), SETTINGS_ANIMATION_TIME);
+  }
+
+  /** @returns {Object} Object with all settings set to their default values */
+  function getDefaultSettings() {
+    return Object.fromEntries(
+      Object.entries(settings).map(([key, config]) => [key, config.default])
+    );
+  }
+
+  /** @returns {Object} Object with all current setting values */
+  function getCurrentSettings() {
+    return Object.fromEntries(
+      Object.entries(settings).map(([key, config]) => [key, config.current])
+    );
+  }
+
+  /** @param {{includeFinals: boolean, shortenNames: boolean, includeDescriptions: boolean, includeQuarterInfo: boolean}} newSettings */
+  function applySettings(newSettings) {
+    Object.entries(newSettings).forEach(([key, value]) => {
+      const config = settings[key];
+      config.checkboxElement.checked = value;
+      config.toggleTextElement.classList.toggle('checked', value);
+      config.current = value;
+    });
+  }
+
+  /** Save the current ICS settings to Chrome storage. */
+  function saveIcsSettings() {
+    console.log('Saving ICS settings...');
+    if (!chrome?.storage?.local) return;
+    chrome.storage.local.set({ icsSettings: getCurrentSettings() });
+  }
+
   /**
    * @param {string} filename
    * @param {string} content
@@ -351,5 +335,15 @@ const settings = {
     link.remove();
 
     URL.revokeObjectURL(url);
+  }
+
+  // for compatibility with the 'lit-html' VSCode extension (i dont feel like importing the library)
+  /**
+   * @param {TemplateStringsArray} strings
+   * @param {...any} values
+   * @returns {string}
+   */
+  function html(strings, ...values) {
+    return strings.reduce((result, str, i) => result + str + (values[i] || ''), '');
   }
 })();
