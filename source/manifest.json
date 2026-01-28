@@ -30,7 +30,8 @@
       "js": [
         "scripts/utils.js",
         "scripts/export-schedule.js",
-        "scripts/instructor-link.js"
+        "scripts/instructor-link.js",
+        "scripts/event-classes.js"
       ]
     },
     {
