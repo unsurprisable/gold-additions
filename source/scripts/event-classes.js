@@ -16,8 +16,11 @@
  * Abstract base class for calendar events, povides ICS generation utilities and interface for subclasses
  */
 class CalendarEvent {
-  static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
-  static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
+  static MONTH_MAP = {
+    January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+    July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
+  };
+
   /**
    * @param {string} time HH:MM AM/PM
    * @returns {{hours: number, minutes: number}} 24hr format
@@ -44,22 +47,63 @@ class CalendarEvent {
   }
 
   /**
-   * Convert ISO string to ICS format without separators.
-   * @param {string} isoString 2025-01-25T10:25:30
-   * @returns {string} 20250125T102530
-   */
-  static isoToIcs(isoString) {
-    return isoString.replaceAll('-', '').replaceAll(':', '');
-  }
-
-  /**
    * Convert a Date to ICS datetime (local) without separators.
    * @param {Date} date Date(2025-01-25T10:25:30.000Z)
    * @returns {string} 20250125T102530
    */
   static dateToIcs(date) {
-    const iso = date.toISOString().split('.')[0];
-    return CalendarEvent.isoToIcs(iso);
+    return date.toISOString()
+      .split('.')[0]
+      .replaceAll('-', '')
+      .replaceAll(':', '');
+  }
+
+  /**
+   * Format a SUMMARY property line.
+   * @param {string} summary
+   * @returns {string}
+   */
+  static formatSummary(summary) {
+    return `SUMMARY:${CalendarEvent.escapeText(summary)}`;
+  }
+
+  /**
+   * Format a LOCATION property line.
+   * @param {string} location
+   * @returns {string}
+   */
+  static formatLocation(location) {
+    return `LOCATION:${CalendarEvent.escapeText(location)}`;
+  }
+
+  /**
+   * Format a DESCRIPTION property line.
+   * @param {string} description
+   * @returns {string}
+   */
+  static formatDescription(description) {
+    return `DESCRIPTION:${CalendarEvent.escapeText(description)}`;
+  }
+
+  /**
+   * Format DTSTART/DTEND with timezone.
+   * @param {string} property - 'DTSTART' or 'DTEND'
+   * @param {string} datetime - ICS formatted datetime
+   * @param {string} [timezone='America/Los_Angeles'] - Timezone ID
+   * @returns {string}
+   */
+  static formatDateTime(property, datetime, timezone = 'America/Los_Angeles') {
+    return `${property};TZID=${timezone}:${datetime}`;
+  }
+
+  /**
+   * Format DTSTART/DTEND as all-day date.
+   * @param {string} property - 'DTSTART' or 'DTEND'
+   * @param {string} date - ICS formatted date (YYYYMMDD)
+   * @returns {string}
+   */
+  static formatDate(property, date) {
+    return `${property};VALUE=DATE:${date}`;
   }
 
   /**
@@ -71,19 +115,47 @@ class CalendarEvent {
   }
 
   /**
-   * Must be implemented by subclasses
-  * @returns {EventIcsData}
+   * Generate DTSTAMP for ICS events (current timestamp in UTC).
+   * @returns {string}
    */
-  getEventIcsData() {
-    throw new Error('getEventIcsData must be implemented by subclass');
+  static generateDtStamp() {
+    return `${CalendarEvent.dateToIcs(new Date())}Z`;
   }
 
   /**
-   * Must be implemented by subclasses
+   * Returns data needed for ICS event generation.
+   * @returns {EventIcsData}
+   */
+  parseEventIcsData() {
+    throw new Error('parseEventIcsData must be implemented by subclass');
+  }
+
+  /**
+   * Build the event-specific lines for the ICS event.
+   * @param {EventIcsData} data - The event data
+   * @returns {string[]} Array of ICS property lines
+   */
+  // eslint-disable-next-line no-unused-vars
+  buildEventLines(data) {
+    throw new Error('buildEventLines must be implemented by subclass');
+  }
+
+  /**
+   * Creates the ICS event string for this event.
    * @returns {string}
    */
   toIcsEvent() {
-    throw new Error('toIcsEvent must be implemented by subclass');
+    const data = this.parseEventIcsData();
+    const uid = CalendarEvent.generateUid();
+    const dtStamp = CalendarEvent.generateDtStamp();
+
+    return [
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${dtStamp}`,
+      ...this.buildEventLines(data),
+      'END:VEVENT'
+    ].join('\n');
   }
 
   /**
@@ -123,19 +195,13 @@ class CalendarEvent {
   }
 }
 
-// TODO: standardize class structures
-
 /** Represents a recurring course event (lecture/section) */
 class CourseClass extends CalendarEvent {
-  static QUARTER_START_YEAR = null;
-  static QUARTER_START_MONTH = null;
-  static QUARTER_START_DAY = null;
-  static QUARTER_END_YEAR = null;
-  static QUARTER_END_MONTH = null;
-  static QUARTER_END_DAY = null;
+  static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
+  static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
+  static QUARTER_START_DATE = null;
+  static QUARTER_END_DATE = null;
   /**
-   * Used to store and modify course data in its raw HTML form.
-   * 
    * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
    * @param {string} professor  MAJEDI M
    * @param {string} days       M W
@@ -158,58 +224,46 @@ class CourseClass extends CalendarEvent {
   }
 
   /** @returns {EventIcsData} */
-  getEventIcsData() {
+  parseEventIcsData() {
     const [startTime, endTime] = this.time.split('-').map(t => CalendarEvent.to24Hour(t.trim()));
     const days = this.days.split(' ');
-    const startDatetime = new Date(Date.UTC(
-      CourseClass.QUARTER_START_YEAR,
-      CourseClass.QUARTER_START_MONTH - 1,
-      CourseClass.QUARTER_START_DAY,
-      startTime.hours,
-      startTime.minutes,
-    ));
-    startDatetime.setUTCDate(startDatetime.getUTCDate() + CalendarEvent.DAY_OFFSET[days[0]]);
+
+    const startDatetime = new Date(CourseClass.QUARTER_START_DATE);
+    startDatetime.setUTCHours(startTime.hours, startTime.minutes, 0, 0);
+    startDatetime.setUTCDate(startDatetime.getUTCDate() + CourseClass.DAY_OFFSET[days[0]]);
 
     const endDatetime = new Date(startDatetime);
     endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
 
     // Compute UNTIL as end of quarter date in UTC (23:59:59Z)
-    const untilUtc = new Date(Date.UTC(
-      CourseClass.QUARTER_END_YEAR,
-      CourseClass.QUARTER_END_MONTH - 1,
-      CourseClass.QUARTER_END_DAY,
-      23, 59, 59
-    ));
+    const untilUtc = new Date(CourseClass.QUARTER_END_DATE);
+    untilUtc.setUTCHours(23, 59, 59, 0);
 
     return {
       summary: settings.shortenNames.current ? this.name.split('-')[0].trim() : this.name,
       dtStart: CalendarEvent.dateToIcs(startDatetime),
       dtEnd: CalendarEvent.dateToIcs(endDatetime),
-      days: days.map((d) => CalendarEvent.DAY_MAP[d]).join(','),
+      days: days.map((d) => CourseClass.DAY_MAP[d]).join(','),
       untilDate: `${CalendarEvent.dateToIcs(untilUtc)}Z`,
       location: this.location,
       description: settings.includeDescriptions.current ? `Instructor: ${this.professor.split('\n').join(', ')}` : '',
     };
   }
 
-  /** @returns {string} */
-  toIcsEvent() {
-    const data = this.getEventIcsData();
-    const uid = CalendarEvent.generateUid();
-    const dtStamp = `${CalendarEvent.dateToIcs(new Date())}Z`;
+  /**
+   * @param {EventIcsData} data
+   * @returns {string[]}
+   */
+  buildEventLines(data) {
     return [
-      'BEGIN:VEVENT',
-      `UID:${uid}`,
-      `DTSTAMP:${dtStamp}`,
-      `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
-      `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
-      `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
+      CalendarEvent.formatSummary(data.summary),
+      CalendarEvent.formatDateTime('DTSTART', data.dtStart),
+      CalendarEvent.formatDateTime('DTEND', data.dtEnd),
       `RRULE:FREQ=WEEKLY;BYDAY=${data.days};UNTIL=${data.untilDate}`,
-      `LOCATION:${CalendarEvent.escapeText(data.location)}`,
+      CalendarEvent.formatLocation(data.location),
     ].concat(
-      data.description ? [`DESCRIPTION:${CalendarEvent.escapeText(data.description)}`] : [],
-      ['END:VEVENT']
-    ).join('\n');
+      data.description ? [CalendarEvent.formatDescription(data.description)] : []
+    );
   }
 }
 
@@ -227,13 +281,8 @@ class FinalExam extends CalendarEvent {
   }
 
   /** @returns {EventIcsData} */
-  getEventIcsData() {
+  parseEventIcsData() {
     // Parse: "Thursday, March 19, 2026 12:00 PM - 3:00 PM"
-    const monthMap = {
-      January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
-      July: 6, August: 7, September: 8, October: 9, November: 10, December: 11
-    };
-
     // Extract components: DayOfWeek, Month Day, Year Time - Time
     const match = this.datetime.match(FinalExam.DATETIME_REGEX);
     const [, monthName, day, year, timeRange] = match;
@@ -244,7 +293,7 @@ class FinalExam extends CalendarEvent {
 
     const startDatetime = new Date(Date.UTC(
       Number(year),
-      monthMap[monthName],
+      CalendarEvent.MONTH_MAP[monthName],
       Number(day),
       startTime.hours,
       startTime.minutes,
@@ -262,23 +311,16 @@ class FinalExam extends CalendarEvent {
     };
   }
 
-  /** @returns {string} */
-  toIcsEvent() {
-    const data = this.getEventIcsData();
-    const uid = CalendarEvent.generateUid();
-    const dtStamp = `${CalendarEvent.dateToIcs(new Date())}Z`;
+  /**
+   * @param {EventIcsData} data
+   * @returns {string[]}
+   */
+  buildEventLines(data) {
     return [
-      'BEGIN:VEVENT',
-      `UID:${uid}`,
-      `DTSTAMP:${dtStamp}`,
-      `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
-      `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
-      `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
-    ].concat(
-      data.location ? [`LOCATION:${CalendarEvent.escapeText(data.location)}`] : [],
-      data.description ? [`DESCRIPTION:${CalendarEvent.escapeText(data.description)}`] : [],
-      ['END:VEVENT']
-    ).join('\n');
+      CalendarEvent.formatSummary(data.summary),
+      CalendarEvent.formatDateTime('DTSTART', data.dtStart),
+      CalendarEvent.formatDateTime('DTEND', data.dtEnd),
+    ];
   }
 }
 
@@ -293,74 +335,65 @@ class ImportantDate extends CalendarEvent {
     super();
     this.name = name;
     this.datetime = datetime;
+    this.isTimed = datetime.trim().split(' ').length === 3;
   }
 
   /**
-   * @param {string} dateString MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM
-   * @returns {string} YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS (ISO 8601)
+   * Convert datetime string to Date object.
+   * @param {string} datetime - MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM
+   * @returns {Date}
    */
-  static toIso(datetime) {
-    const parts = datetime.trim().split(' ');
-    const [month, day, year] = parts[0].split('/').map(Number);
-    const dateFormatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  static toDate(datetime) {
+    const [date, time, meridiem] = datetime.trim().split(' ');
+    const [month, day, year] = date.split('/').map(Number);
 
-    if (parts.length === 3) {
-      // Has time component
-      const timeString = `${parts[1]} ${parts[2]}`; // HH:MM AM/PM
-      const { hours, minutes } = CalendarEvent.to24Hour(timeString);
-      return `${dateFormatted}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-    }
+    const { hours, minutes } = time && meridiem // contains time
+      ? CalendarEvent.to24Hour(`${time} ${meridiem}`)
+      : { hours: 0, minutes: 0 };
 
-    return dateFormatted;
+    return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
   }
 
   /** @returns {EventIcsData} */
-  getEventIcsData() {
-    const summary = this.name;
-    const isoString = ImportantDate.toIso(this.datetime);
-    const startDatetime = new Date(isoString);
-    const isDateTime = this.datetime.trim().split(' ').length === 3;
-
+  parseEventIcsData() {
+    const startDatetime = ImportantDate.toDate(this.datetime);
     const endDatetime = new Date(startDatetime);
-    if (!isDateTime) {
-      // All-day events: end at start of next day
-      endDatetime.setUTCDate(endDatetime.getUTCDate() + 1);
-    } else {
-      // Timed events: 1-hour duration
+
+    if (this.isTimed) {
+      // Timed event: 1-hour duration
       endDatetime.setUTCHours(endDatetime.getUTCHours() + 1);
+    } else {
+      // All-day event: end at start of next day
+      endDatetime.setUTCDate(endDatetime.getUTCDate() + 1);
     }
 
+    const dtStart = CalendarEvent.dateToIcs(startDatetime);
+    const dtEnd = CalendarEvent.dateToIcs(endDatetime);
+
     return {
-      summary,
-      dtStart: CalendarEvent.dateToIcs(startDatetime),
-      dtEnd: CalendarEvent.dateToIcs(endDatetime),
+      summary: this.name,
+      dtStart: this.isTimed ? dtStart : dtStart.slice(0, 8),
+      dtEnd: this.isTimed ? dtEnd : dtEnd.slice(0, 8),
     };
   }
 
-  /** @returns {string} */
-  toIcsEvent() {
-    const data = this.getEventIcsData();
-    const uid = CalendarEvent.generateUid();
-    const dtStamp = `${CalendarEvent.dateToIcs(new Date())}Z`;
-    const isDateTime = this.datetime.trim().split(' ').length === 3;
-
-    const base = [
-      'BEGIN:VEVENT',
-      `UID:${uid}`,
-      `DTSTAMP:${dtStamp}`,
-      `SUMMARY:${CalendarEvent.escapeText(data.summary)}`,
+  /**
+   * @param {EventIcsData} data
+   * @returns {string[]}
+   */
+  buildEventLines(data) {
+    return [
+      CalendarEvent.formatSummary(data.summary),
+      ...(this.isTimed
+        ? [
+          CalendarEvent.formatDateTime('DTSTART', data.dtStart),
+          CalendarEvent.formatDateTime('DTEND', data.dtEnd),
+        ]
+        : [
+          CalendarEvent.formatDate('DTSTART', data.dtStart),
+          CalendarEvent.formatDate('DTEND', data.dtEnd),
+        ]
+      ),
     ];
-
-    const dateLines = isDateTime
-      ? [
-        `DTSTART;TZID=America/Los_Angeles:${data.dtStart}`,
-        `DTEND;TZID=America/Los_Angeles:${data.dtEnd}`,
-      ]
-      : [
-        `DTSTART;VALUE=DATE:${data.dtStart.slice(0, 8)}`,
-        `DTEND;VALUE=DATE:${data.dtEnd.slice(0, 8)}`,
-      ];
-
-    return base.concat(dateLines, ['END:VEVENT']).join('\n');
   }
 }

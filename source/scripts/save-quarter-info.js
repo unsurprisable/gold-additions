@@ -1,7 +1,5 @@
 /* Copied from xziyu6/export-ucsb-gold (MIT License) */
 
-/* global chrome*/
-
 /** 
  * Save quarter information to Chrome storage
  * @param {{[quarterId: string]: {name: string, start: string, end: string}}} quarterInfo 

@@ -126,9 +126,9 @@ const settings = {
         event.preventDefault();
         return; // prob not the best way to do this but wtv
       }
-      console.log('Generating ICS file data...');
       const icsFileData = generateIcsData();
       downloadCalendar('GOLD Schedule Calendar.ics', icsFileData);
+      console.log('Downloaded ICS file.');
       saveIcsSettings();
       hideCalendarContext();
     });
@@ -174,6 +174,7 @@ const settings = {
   }
 
   // TODO: separate MW classes into two events
+  // TODO: standardize scraping
 
   /**
   * Scrape the schedule page for all course and final exam event data.
@@ -271,8 +272,8 @@ const settings = {
 
       // Update download button state and CourseClass quarter date info
       if (q) {
-        [CourseClass.QUARTER_START_YEAR, CourseClass.QUARTER_START_MONTH, CourseClass.QUARTER_START_DAY] = ImportantDate.toIso(q.start).split('-').map(Number);
-        [CourseClass.QUARTER_END_YEAR, CourseClass.QUARTER_END_MONTH, CourseClass.QUARTER_END_DAY] = ImportantDate.toIso(q.end).split('-').map(Number);
+        CourseClass.QUARTER_START_DATE = ImportantDate.toDate(q.start);
+        CourseClass.QUARTER_END_DATE = ImportantDate.toDate(q.end);
         quarterWarning.style.display = 'none';
         downloadButton.classList.remove('aspNetDisabled');
       } else {
@@ -318,7 +319,6 @@ const settings = {
 
   /** Save the current ICS settings to Chrome storage. */
   function saveIcsSettings() {
-    console.log('Saving ICS settings...');
     chrome.storage.local.set({ icsSettings: getCurrentSettings() });
   }
 
