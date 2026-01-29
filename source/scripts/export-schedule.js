@@ -1,4 +1,4 @@
-/* global CalendarEvent, CourseClass, FinalExam, ImportantDate*/
+/* global CalendarEvent, CourseClass, FinalExam, ImportantDate, QUARTER_DATE_FIELDS */
 
 const settings = {
   includeFinals: {
@@ -155,15 +155,11 @@ const settings = {
     // Append quarter important date events if enabled and available
     const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
     if (settings.includeQuarterInfo.current && quarterInfo) {
-      if (quarterInfo.start) events.push(new ImportantDate('First Day of Instruction', quarterInfo.start));
-      if (quarterInfo.end) events.push(new ImportantDate('Last Day of Instruction', quarterInfo.end));
-      if (quarterInfo.pass1) events.push(new ImportantDate('Registration Pass 1 Opens', quarterInfo.pass1));
-      if (quarterInfo.pass2) events.push(new ImportantDate('Registration Pass 2 Opens', quarterInfo.pass2));
-      if (quarterInfo.pass3) events.push(new ImportantDate('Registration Pass 3 Opens', quarterInfo.pass3));
-      if (quarterInfo.addDeadline) events.push(new ImportantDate('Add Course Deadline', quarterInfo.addDeadline));
-      if (quarterInfo.dropDeadline) events.push(new ImportantDate('Drop Course Deadline', quarterInfo.dropDeadline));
-      if (quarterInfo.pNpDeadline) events.push(new ImportantDate('P/NP Deadline', quarterInfo.pNpDeadline));
-      if (quarterInfo.feeDeadline) events.push(new ImportantDate('Fee Deadline', quarterInfo.feeDeadline));
+      Object.entries(quarterInfo).forEach(([key, value]) => {
+        if (QUARTER_DATE_FIELDS[key]) {
+          events.push(new ImportantDate(QUARTER_DATE_FIELDS[key].name, value));
+        }
+      });
     }
 
     const icsFileData = CalendarEvent.toIcsCalendar(events);
@@ -264,7 +260,6 @@ const settings = {
     quarterLabel.textContent = PAGE_QUARTER_NAME;
     chrome.storage.local.get(['quarters'], (result) => {
       QUARTERS_CACHE = result.quarters || {};
-
       // Update warning visibility
       const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
       const quarterWarning = document.getElementById('ics-quarter-warning');

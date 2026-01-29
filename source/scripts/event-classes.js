@@ -324,7 +324,6 @@ class FinalExam extends CalendarEvent {
   }
 }
 
-// TODO: move important date naming to save file
 /** Represents an academic important date (deadline, registration opening, etc.) */
 class ImportantDate extends CalendarEvent {
   /**

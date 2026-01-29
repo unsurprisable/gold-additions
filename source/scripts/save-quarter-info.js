@@ -1,21 +1,5 @@
 /* Copied from xziyu6/export-ucsb-gold (MIT License) */
-
-/** 
- * Save quarter information to Chrome storage
- * @param {{[quarterId: string]: {name: string, start: string, end: string}}} quarterInfo 
- */
-function saveDates(quarterInfo) {
-  chrome.storage.local.get(['quarters'], (result) => {
-    const quarters = result.quarters || {};
-    Object.assign(quarters, quarterInfo);
-
-    chrome.storage.local.set({ quarters }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Error saving quarter info:', chrome.runtime.lastError);
-      }
-    });
-  });
-}
+/* global QUARTER_DATE_FIELDS */
 
 /** @returns {{[quarterId: string]: {name: string, start: string, end: string}}} */
 function getQuarterInfo() {
@@ -25,31 +9,29 @@ function getQuarterInfo() {
   const quarterId = quarter.getAttribute('value').trim();
   const quarterName = quarter.textContent.trim();
 
-  const pass1StartTime = getText('#pageContent_PassOneLabel').split(' - ')[0];
-  const pass2StartTime = getText('#pageContent_PassTwoLabel').split(' - ')[0];
-  const pass3StartTime = getText('#pageContent_PassThreeLabel').split(' - ')[0];
-  const startDate = getText('#pageContent_FirstDayInstructionLabel');
-  const addDeadline = getText('#pageContent_AddDeadlineLabel');
-  const dropDeadline = getText('#pageContent_DropDeadlineLabel');
-  const pNpDeadline = getText('#pageContent_GradingOptionLabel');
-  const feeDeadline = getText('#pageContent_FeeDeadlineLabel');
-  const endDate = getText('#pageContent_LastDayInstructionLabel');
+  const quarterData = { name: quarterName };
+  
+  Object.entries(QUARTER_DATE_FIELDS).forEach(([key, config]) => {
+    let value = getText(config.selector);
+    if (config.extractStart || config.extractEnd)
+      value = value.split(' - ')[config.extractStart ? 0 : 1];
+    if (config.allDay) value = value.split(' ')[0];
+    quarterData[key] = value;
+  });
 
-  console.log(`Saved ${quarterId}: ${quarterName}`);
-  return {
-    [quarterId]: {
-      name: quarterName,
-      pass1: pass1StartTime,
-      pass2: pass2StartTime,
-      pass3: pass3StartTime,
-      addDeadline,
-      dropDeadline,
-      pNpDeadline,
-      feeDeadline,
-      start: startDate,
-      end: endDate
-    }
-  };
+  return { [quarterId]: quarterData };
+}
+
+/** 
+ * Save quarter information and date field names to Chrome storage
+ * @param {Object} quarterInfo - Quarter data keyed by quarter ID
+ */
+function saveDates(quarterInfo) {
+  chrome.storage.local.get(['quarters'], (result) => {
+    const quarters = result.quarters || {};
+    Object.assign(quarters, quarterInfo);
+    chrome.storage.local.set({ quarters });
+  });
 }
 
 const buttonHtml = `<input type="submit" value="Save Quarter Info" id="save-quarter-button" style="margin-left: 10px; font-size: 13px; padding: 5px 10px;">`;
