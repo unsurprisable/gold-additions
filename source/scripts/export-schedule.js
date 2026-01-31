@@ -154,8 +154,6 @@ const settings = {
     return icsFileData;
   }
 
-  // TODO: separate MW classes into two events
-
   /**
    * @param {HTMLElement} scheduleItem
    * @returns {CourseClass[]}
@@ -194,14 +192,16 @@ const settings = {
         .map((n) => n.textContent.trim())
         .filter(Boolean)
         .join(', ');
-      const days = classInfo.children[0].childNodes[2].textContent.trim();
+      const days = classInfo.children[0].childNodes[2].textContent.trim().split(' ');
       const time = classInfo.children[1].childNodes[2].textContent.trim();
       const location = classInfo.children[2].childNodes[2].textContent.trim();
       const courseID = courseInfo.children[0].textContent.trim();
       const grading = courseInfo.children[1].textContent.trim().substring(9); // remove 'Grading: ' prefix
       const units = courseInfo.children[2].textContent.trim().substring(0, 3); // remove ' Units' suffix
 
-      courseClasses.push(new CourseClass(name, professor, days, time, location, courseID, grading, units));
+      for (let i = 0; i < days.length; i++) {
+        courseClasses.push(new CourseClass(name, professor, days[i], time, location, courseID, grading, units));
+      }
     }
     return courseClasses;
   }
@@ -246,6 +246,7 @@ const settings = {
     });
   }
 
+  /** @param {CalendarEvent[]} events */
   function getImportantDates(events) {
     const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
     Object.entries(quarterInfo).forEach(([key, value]) => {
@@ -274,8 +275,8 @@ const settings = {
 
       // Update download button state and CourseClass quarter date info
       if (q && q.start && q.end && ImportantDate.DATE_REGEX.test(q.start) && ImportantDate.DATE_REGEX.test(q.end)) {
-        CourseClass.QUARTER_START_DATE = ImportantDate.toDate(q.start);
-        CourseClass.QUARTER_END_DATE = ImportantDate.toDate(q.end);
+        CourseClass.INSTRUCTION_START_DATE = ImportantDate.toDate(q.start);
+        CourseClass.INSTRUCTION_END_DATE = ImportantDate.toDate(q.end);
         quarterWarning.style.display = 'none';
         downloadButton.classList.remove('aspNetDisabled');
       } else {

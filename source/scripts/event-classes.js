@@ -203,24 +203,24 @@ class CalendarEvent {
 class CourseClass extends CalendarEvent {
   static DAY_MAP = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' };
   static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
-  static QUARTER_START_DATE = null;
-  static QUARTER_END_DATE = null;
+  static INSTRUCTION_START_DATE = null;
+  static INSTRUCTION_END_DATE = null;
 
   /**
    * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
    * @param {string} professor  MAJEDI M
-   * @param {string} days       M W
+   * @param {string} day       M
    * @param {string} time       2:00 PM-3:15 PM
    * @param {string} location   Harold Frank Hall, 1104
    * @param {string} courseID   07682
    * @param {string} grading    L
    * @param {string} units      4.0
    */
-  constructor(name, professor, days, time, location, courseID, grading, units) {
+  constructor(name, professor, day, time, location, courseID, grading, units) {
     super();
     this.name = name;
     this.professor = professor;
-    this.days = days;
+    this.day = day;
     this.time = time;
     this.location = location;
     this.courseID = courseID;
@@ -231,24 +231,22 @@ class CourseClass extends CalendarEvent {
   /** @returns {EventIcsData} */
   parseEventIcsData() {
     const [startTime, endTime] = this.time.split('-').map(t => CalendarEvent.to24Hour(t.trim()));
-    const days = this.days.split(' ');
 
-    const startDatetime = new Date(CourseClass.QUARTER_START_DATE);
+    const startDatetime = new Date(CourseClass.INSTRUCTION_START_DATE);
     startDatetime.setUTCHours(startTime.hours, startTime.minutes, 0, 0);
-    startDatetime.setUTCDate(startDatetime.getUTCDate() + CourseClass.DAY_OFFSET[days[0]]);
-
+    startDatetime.setUTCDate(startDatetime.getUTCDate() + CourseClass.DAY_OFFSET[this.day]);
     const endDatetime = new Date(startDatetime);
     endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
 
     // Compute UNTIL as end of quarter date in UTC (23:59:59Z)
-    const untilUtc = new Date(CourseClass.QUARTER_END_DATE);
+    const untilUtc = new Date(CourseClass.INSTRUCTION_END_DATE);
     untilUtc.setUTCHours(23, 59, 59, 0);
 
     return {
       summary: settings.shortenNames.current ? this.name.split('-')[0].trim() : this.name,
       dtStart: CalendarEvent.dateToIcs(startDatetime),
       dtEnd: CalendarEvent.dateToIcs(endDatetime),
-      days: days.map((d) => CourseClass.DAY_MAP[d]).join(','),
+      days: CourseClass.DAY_MAP[this.day],
       untilDate: `${CalendarEvent.dateToIcs(untilUtc)}Z`,
       location: this.location,
       description: settings.includeDescriptions.current ? `Instructor: ${this.professor.split('\n').join(', ')}` : '',
@@ -276,7 +274,7 @@ class CourseClass extends CalendarEvent {
 class FinalExam extends CalendarEvent {
   // eg. Thursday, March 19, 2026 12:00 PM - 3:00 PM
   static DATETIME_REGEX = /^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/;
-  
+
   /**
    * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
    * @param {string} datetime   Thursday, March 19, 2026 12:00 PM - 3:00 PM
@@ -335,7 +333,7 @@ class FinalExam extends CalendarEvent {
 /** Represents an academic important date (deadline, registration opening, etc.) */
 class ImportantDate extends CalendarEvent {
   // MM/DD/YYYY
-  static DATE_REGEX = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}$/
+  static DATE_REGEX = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}$/;
 
   // MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM
   static DATETIME_REGEX = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?$/;
