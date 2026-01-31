@@ -26,7 +26,11 @@ class CalendarEvent {
    * @returns {{hours: number, minutes: number}} 24hr format
    */
   static to24Hour(time) {
-    const [, h, m, mer] = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    const TIME_REGEX = /^(0?[1-9]|1[0-2]):([0-5][0-9])\s*(AM|PM)$/i;
+    if (!TIME_REGEX.test(time)) {
+      throw new Error(`Invalid time format: ${time}`);
+    }
+    const [, h, m, mer] = time.trim().match(TIME_REGEX);
     const hours = mer.toUpperCase() === 'PM' ?
       (h === '12' ? 12 : Number(h) + 12) :
       (h === '12' ? 0 : Number(h));
@@ -201,6 +205,7 @@ class CourseClass extends CalendarEvent {
   static DAY_OFFSET = { M: 0, T: 1, W: 2, R: 3, F: 4 };
   static QUARTER_START_DATE = null;
   static QUARTER_END_DATE = null;
+
   /**
    * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
    * @param {string} professor  MAJEDI M
@@ -269,7 +274,9 @@ class CourseClass extends CalendarEvent {
 
 /** Represents a final exam (single non-recurring event) */
 class FinalExam extends CalendarEvent {
-  static DATETIME_REGEX = /^\w+,\s+(\w+)\s+(\d+),\s+(\d{4})\s+(.+)$/;
+  // eg. Thursday, March 19, 2026 12:00 PM - 3:00 PM
+  static DATETIME_REGEX = /^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM))\s*-\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/;
+  
   /**
    * @param {string} name       CMPSC 16 - PROBLEM SOLVING I
    * @param {string} datetime   Thursday, March 19, 2026 12:00 PM - 3:00 PM
@@ -284,9 +291,10 @@ class FinalExam extends CalendarEvent {
   parseEventIcsData() {
     // Parse: "Thursday, March 19, 2026 12:00 PM - 3:00 PM"
     // Extract components: DayOfWeek, Month Day, Year Time - Time
-    const match = this.datetime.match(FinalExam.DATETIME_REGEX);
-    const [, monthName, day, year, timeRange] = match;
-    const [startTimeStr, endTimeStr] = timeRange.split('-').map(t => t.trim());
+    if (!FinalExam.DATETIME_REGEX.test(this.datetime)) {
+      throw new Error(`Invalid datetime format: ${this.datetime}`);
+    }
+    const [, monthName, day, year, startTimeStr, endTimeStr] = this.datetime.match(FinalExam.DATETIME_REGEX);
 
     const startTime = CalendarEvent.to24Hour(startTimeStr);
     const endTime = CalendarEvent.to24Hour(endTimeStr);
@@ -326,6 +334,12 @@ class FinalExam extends CalendarEvent {
 
 /** Represents an academic important date (deadline, registration opening, etc.) */
 class ImportantDate extends CalendarEvent {
+  // MM/DD/YYYY
+  static DATE_REGEX = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}$/
+
+  // MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM
+  static DATETIME_REGEX = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM))?$/;
+
   /**
    * @param {string} name       Name of the important date (e.g., "Add Deadline", "Registration Pass 1 Opens")
    * @param {string} datetime   Raw date string from GOLD page (MM/DD/YYYY or MM/DD/YYYY HH:MM AM/PM)
@@ -343,6 +357,9 @@ class ImportantDate extends CalendarEvent {
    * @returns {Date}
    */
   static toDate(datetime) {
+    if (!ImportantDate.DATETIME_REGEX.test(datetime)) {
+      throw new Error(`Invalid datetime format: ${datetime}`);
+    }
     const [date, time, meridiem] = datetime.trim().split(' ');
     const [month, day, year] = date.split('/').map(Number);
 

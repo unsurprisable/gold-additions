@@ -36,8 +36,6 @@ const settings = {
 };
 
 (() => {
-  console.log('Student Schedule');
-
   const SETTINGS_ANIMATION_TIME = 300; // ms - not synced with ics-settings.css
 
   const scheduleContainer = document.querySelector('#div_Schedule_Container');
@@ -86,14 +84,10 @@ const settings = {
     const cssLink = document.getElementById('ics-settings-css');
     cssLink.href = chrome.runtime.getURL('css/ics-settings.css');
 
-    // Cache DOM elements for all settings
+    // Cache DOM elements for settings and update checkbox status to its display text
     Object.entries(settings).forEach(([, config]) => {
       config.checkboxElement = document.querySelector(config.checkboxSelector);
       config.toggleTextElement = document.querySelector(config.toggleTextSelector);
-    });
-
-    // Update checkbox status to its display text
-    Object.entries(settings).forEach(([, config]) => {
       config.checkboxElement.addEventListener('change', () => {
         config.toggleTextElement.classList.toggle('checked', config.checkboxElement.checked);
         config.current = config.checkboxElement.checked;
@@ -118,9 +112,6 @@ const settings = {
     });
 
     const downloadButton = document.getElementById('ics-download');
-    const resetButton = document.getElementById('ics-reset');
-    const cancelButton = document.getElementById('ics-cancel');
-
     downloadButton.addEventListener('click', (event) => {
       if (downloadButton.classList.contains('aspNetDisabled')) {
         event.preventDefault();
@@ -133,12 +124,13 @@ const settings = {
       hideCalendarContext();
     });
 
+    const resetButton = document.getElementById('ics-reset');
     resetButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      console.log('Resetting to default settings...');
+      event.preventDefault(); // button is <a>, prevent navigation
       applySettings(getDefaultSettings());
     });
 
+    const cancelButton = document.getElementById('ics-cancel');
     cancelButton.addEventListener('click', (event) => {
       event.preventDefault();
       hideCalendarContext();
@@ -150,39 +142,25 @@ const settings = {
 
   /** @returns {string} */
   function generateIcsData() {
-    const events = scrapeCourses();
-
-    // Append quarter important date events if enabled and available
-    const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
-    if (settings.includeQuarterInfo.current && quarterInfo) {
-      Object.entries(quarterInfo).forEach(([key, value]) => {
-        if (QUARTER_DATE_FIELDS[key]) {
-          events.push(new ImportantDate(QUARTER_DATE_FIELDS[key].name, value));
-        }
-      });
-    }
-
+    const events = [];
+    getCourseClasses(events);
+    if (settings.includeFinals.current) getFinalExams(events);
+    if (settings.includeQuarterInfo.current) getImportantDates(events);
     const icsFileData = CalendarEvent.toIcsCalendar(events);
-    console.groupCollapsed('ICS File Data');
-    console.log(icsFileData);
-    console.groupEnd();
+    // debug:
+    // console.groupCollapsed('ICS File Data');
+    // console.log(icsFileData);
+    // console.groupEnd();
     return icsFileData;
   }
 
   // TODO: separate MW classes into two events
-  // TODO: standardize scraping
 
   /**
-  * Scrape the schedule page for all course and final exam event data.
-  * @returns {CalendarEvent[]}
+   * @param {HTMLElement} scheduleItem
+   * @returns {CourseClass[]}
    */
-  function scrapeCourses() {
-    const events = [];
-
-    // ===== Lectures and Sections =====
-
-    const scheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)');
-
+  function parseScheduleItem(scheduleItem) {
     /*
      * FOR FUTURE REFERENCE:
      * Hierarchy starting from scheduleItem:
@@ -197,59 +175,87 @@ const settings = {
      * >>>> .children[0,1,2,4] - {days, time, location, professor}   |
      * >>>>> .childNodes[2...] - raw text data for the above         |
      */
-    scheduleItems.forEach((scheduleItem) => {
-      const courseInfo = scheduleItem.children[1].children[0].children[0];
-      const classes = scheduleItem.children[1].children[1];
+    const courseInfo = scheduleItem.children[1].children[0].children[0];
+    const classes = scheduleItem.children[1].children[1];
 
-      /*
-       * necessary for distinguishing between Lectures & Sections 
-       * (so that they have separate events on the calendar)
-       * if the student is in ONLY a lecture or ONLY a section,
-       * it'll just loop once so it doesn't really matter
-       */
-      for (let i = 0; i < classes.children.length; i++) {
-        const classInfo = classes.children[i];
+    /*
+     * necessary for distinguishing between Lectures & Sections 
+     * (so that they have separate events on the calendar)
+     * if the student is in ONLY a lecture or ONLY a section,
+     * it'll just loop once so it doesn't really matter
+     */
+    const courseClasses = [];
+    for (let i = 0; i < classes.children.length; i++) {
+      const classInfo = classes.children[i];
 
-        const name = scheduleItem.children[0].textContent.trim().replace(/\s+/g, ' '); // cut out the random extra spaces
-        const professor = Array.from(classInfo.children[4].childNodes) // possibility of multiple professors (eg. ENGR 13A)
-          .slice(2)
-          .map((n) => n.textContent.trim())
-          .filter(Boolean)
-          .join(', ');
-        const days = classInfo.children[0].childNodes[2].textContent.trim();
-        const time = classInfo.children[1].childNodes[2].textContent.trim();
-        const location = classInfo.children[2].childNodes[2].textContent.trim();
-        const courseID = courseInfo.children[0].textContent.trim();
-        const grading = courseInfo.children[1].textContent.trim().substring(9); // remove 'Grading: ' prefix
-        const units = courseInfo.children[2].textContent.trim().substring(0, 3); // remove ' Units' suffix
+      const name = scheduleItem.children[0].textContent.trim().replace(/\s+/g, ' '); // cut out the random extra spaces
+      const professor = Array.from(classInfo.children[4].childNodes) // possibility of multiple professors (eg. ENGR 13A)
+        .slice(2)
+        .map((n) => n.textContent.trim())
+        .filter(Boolean)
+        .join(', ');
+      const days = classInfo.children[0].childNodes[2].textContent.trim();
+      const time = classInfo.children[1].childNodes[2].textContent.trim();
+      const location = classInfo.children[2].childNodes[2].textContent.trim();
+      const courseID = courseInfo.children[0].textContent.trim();
+      const grading = courseInfo.children[1].textContent.trim().substring(9); // remove 'Grading: ' prefix
+      const units = courseInfo.children[2].textContent.trim().substring(0, 3); // remove ' Units' suffix
 
-        events.push(new CourseClass(name, professor, days, time, location, courseID, grading, units));
-      }
-
-    });
-
-    // ===== Final Exams =====
-
-    if (settings.includeFinals.current) {
-      // last line is a note (weird design)
-      const finalExamSection = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
-      /*
-       * hiearchy starting from examItem:
-       * 
-       * > .children[0] - {course name}       
-       * > .children[1] - {exam date & time}
-       */
-      finalExamSection.forEach((examItem) => {
-        const name = examItem.children[0].textContent.trim().replace(/\s+/g, ' ');
-        const datetime = examItem.children[1].textContent.trim();
-        // sometimes the field says stuff like "Contact Professor for Final Exam Information"
-        if (FinalExam.DATETIME_REGEX.test(datetime)) {
-          events.push(new FinalExam(name, datetime));
-        }
-      });
+      courseClasses.push(new CourseClass(name, professor, days, time, location, courseID, grading, units));
     }
+    return courseClasses;
+  }
 
-    return events;
+  /** @param {CalendarEvent[]} events */
+  function getCourseClasses(events) {
+    // .unitSection contains a line "Total Units: X"
+    const scheduleItems = scheduleContainer.querySelectorAll('.scheduleItem:not(.unitsSection)');
+    scheduleItems.forEach((scheduleItem) => {
+      events.push(...parseScheduleItem(scheduleItem));
+    });
+  }
+
+  /**
+   * @param {HTMLElement} finalBlock
+   * @returns {FinalExam}
+   */
+  function parseFinalBlock(finalBlock) {
+    /*
+     * hiearchy starting from examItem:
+     * 
+     * > .children[0] - {course name}       
+     * > .children[1] - {exam date & time}
+     */
+    const name = finalBlock.children[0].textContent.trim().replace(/\s+/g, ' ');
+    const datetime = finalBlock.children[1].textContent.trim();
+    // sometimes the field says stuff like "Contact Professor for Final Exam Information"
+    if (FinalExam.DATETIME_REGEX.test(datetime)) {
+      return new FinalExam(name, datetime);
+    } else {
+      return null;
+    }
+  }
+
+  /** @param {CalendarEvent[]} events */
+  function getFinalExams(events) {
+    // last line is a note, no idea why it's designed like this
+    const finalBlocks = Array.from(document.querySelectorAll('.row.finalBlock')).slice(0, -1);
+    finalBlocks.forEach((finalBlock) => {
+      const exam = parseFinalBlock(finalBlock);
+      if (exam) events.push(exam);
+    });
+  }
+
+  function getImportantDates(events) {
+    const quarterInfo = QUARTERS_CACHE[PAGE_QUARTER_ID];
+    Object.entries(quarterInfo).forEach(([key, value]) => {
+      if (key === 'name') return;
+      if (QUARTER_DATE_FIELDS[key]) {
+        events.push(new ImportantDate(QUARTER_DATE_FIELDS[key].name, value));
+      } else {
+        console.warn(`Unknown quarter date field: ${key}`);
+      }
+    });
   }
 
   // ===== Helpers =====
@@ -260,13 +266,14 @@ const settings = {
     quarterLabel.textContent = PAGE_QUARTER_NAME;
     chrome.storage.local.get(['quarters'], (result) => {
       QUARTERS_CACHE = result.quarters || {};
-      // Update warning visibility
       const q = QUARTERS_CACHE[PAGE_QUARTER_ID];
+
+      // Update warning visibility
       const quarterWarning = document.getElementById('ics-quarter-warning');
       const downloadButton = document.getElementById('ics-download');
 
       // Update download button state and CourseClass quarter date info
-      if (q) {
+      if (q && q.start && q.end && ImportantDate.DATE_REGEX.test(q.start) && ImportantDate.DATE_REGEX.test(q.end)) {
         CourseClass.QUARTER_START_DATE = ImportantDate.toDate(q.start);
         CourseClass.QUARTER_END_DATE = ImportantDate.toDate(q.end);
         quarterWarning.style.display = 'none';
