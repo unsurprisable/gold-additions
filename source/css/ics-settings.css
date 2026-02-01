@@ -97,7 +97,16 @@
 
 #ics-button-container a {
   font-size: 16px;
-  width: 135px;
+  width: 110px;
+}
+
+#ics-button-container a.secondary {
+  background-color: #ccc;
+  color: #333;
+}
+
+#ics-button-container a.secondary:hover {
+  background-color: #999;
 }
 
 .input-container {

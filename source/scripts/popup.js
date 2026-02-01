@@ -1,4 +1,4 @@
-/* global chrome, SEARCH_URL */
+/* global SEARCH_URL */
 
 /**
  * Open RateMyProfessors search for the given professor name.

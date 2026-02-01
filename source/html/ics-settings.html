@@ -1,25 +1,14 @@
+<link id="ics-settings-css" rel="stylesheet" href=""> <!-- link injected from js -->
 <div id="ics-settings">
   <h3>CHOOSE YOUR PREFERENCES</h3>
   <hr style="margin-top: -4px">
   <div class="input-container">
     <span id="ics-quarter-label" style="font-weight: bold;;"></span>
     <span id="ics-quarter-warning" style="color: #c00; margin-left: 10px; display: none; font-size: 14px;">
-      ⚠ No saved info for this quarter. Please save it on the Registration page: <a id="ics-warning-link"
-        href="https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx#:~:text=First%20Day%20of%20Instruction%3A"
-        target="_blank" rel="noopener noreferrer">registration info</a>
+      ⚠ No saved info for this quarter. Please save it on the <a id="ics-warning-link"
+        href="https://my.sa.ucsb.edu/gold/RegistrationInfo.aspx#:~:text=Registration%20Dates%20for%20Winter%202026"
+        target="_blank" rel="noopener noreferrer">Registration page</a>
     </span>
-  </div>
-  <div class="input-container">
-    <span>First MONDAY of the quarter? *</span>
-    <input id="ics-start-date" type=date>
-    <div id="ics-autofill-reminder" style="margin-top: 2px">
-      <u title="To change quarters, navigate to Registration and change your Quarter. Then, click 'Save Quarter Info' again.">🛈 Dates autofilled for </u>
-      <u id="ics-autofill-quarter"></u>
-    </div>
-  </div>
-  <div class="input-container">
-    <span>Last FRIDAY of the quarter? *</span>
-    <input id="ics-end-date" type=date>
   </div>
   <div class="input-container">
     <span>Include course finals?</span>
@@ -60,10 +49,24 @@
       </span>
     </div>
   </div>
+  <div class="input-container">
+    <span>Include quarter info?</span>
+    <div>
+      <label id="include-quarter-checkbox" class="switch" style="margin-right: 10px">
+        <input type=checkbox>
+        <span class="slider"></span>
+      </label>
+      <span id="include-quarter-toggle-text" class="toggle-text">
+        <u class="when-off">No Quarter Info</u>
+        <u class="when-on">Include important deadlines</u>
+      </span>
+    </div>
+  </div>
   <div id="ics-button-container">
-    <a id="ics-download" role="button" class="aspNetDisabled gold-button"
+    <a id="ics-download" role="button" class="gold-button"
       href="https://calendar.google.com/calendar/r/settings/export?pli=1" target="_blank"
       rel="noopener noreferrer">Download</a>
+    <a id="ics-reset" role="button" class="gold-button secondary" href="#">Reset</a>
     <a id="ics-cancel" role="button" class="gold-button" href="#">Cancel</a>
   </div>
 </div>
