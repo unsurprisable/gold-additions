@@ -11,6 +11,7 @@ const QUARTER_DATE_FIELDS = {
   pass2End: { name: 'Registration Pass 2 Closes', selector: '#pageContent_PassTwoLabel', extractEnd: true, allDay: true },
   pass3Start: { name: 'Registration Pass 3 Opens', selector: '#pageContent_PassThreeLabel', extractStart: true },
   pass3End: { name: 'Registration Pass 3 Closes', selector: '#pageContent_PassThreeLabel', extractEnd: true, allDay: true },
+  noApprovalAddDeadline: { name: 'Add Course without Approval Code Deadline', selector: '#pageContent_AddDeadlineWithoutApprovalCodeLabel' },
   addDeadline: { name: 'Add Course Deadline', selector: '#pageContent_AddDeadlineLabel' },
   dropDeadline: { name: 'Drop Course Deadline', selector: '#pageContent_DropDeadlineLabel' },
   pNpDeadline: { name: 'P/NP Deadline', selector: '#pageContent_GradingOptionLabel' },
