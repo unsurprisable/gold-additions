@@ -232,7 +232,9 @@ class CourseClass extends CalendarEvent {
 
     const startDatetime = new Date(CourseClass.INSTRUCTION_START_DATE);
     startDatetime.setUTCHours(startTime.hours, startTime.minutes, 0, 0);
-    startDatetime.setUTCDate(startDatetime.getUTCDate() + CourseClass.DAY_OFFSET[this.day]);
+    //getUTCDay() starts at 0 for Sunday, I'm using 0 for Monday, hence - 1
+    const offset = (CourseClass.DAY_OFFSET[this.day] - (startDatetime.getUTCDay() - 1) + 7) % 7;
+    startDatetime.setUTCDate(startDatetime.getUTCDate() + offset);
     const endDatetime = new Date(startDatetime);
     endDatetime.setUTCHours(endTime.hours, endTime.minutes, 0, 0);
 
